@@ -5,6 +5,15 @@ from app.schemas.book_group import BookGroupAssignmentUpdate, BookGroupCreate, B
 from app.schemas.chapter_rule import ChapterRuleCreate, ChapterRuleRead, ChapterRuleUpdate
 from app.schemas.common import ORMModel
 from app.schemas.health import HealthResponse
+from app.schemas.preferences import (
+    BookshelfPreferences,
+    BookshelfPreferencesPatch,
+    ReaderPreferences,
+    ReaderPreferencesPatch,
+    UserPreferencesDocument,
+    UserPreferencesPatchRequest,
+    UserPreferencesResponse,
+)
 from app.schemas.reading_progress import ReadingProgressCreate, ReadingProgressRead, ReadingProgressSyncRequest, ReadingProgressUpdate
 from app.schemas.rule_test import RuleTestItem, RuleTestRequest, RuleTestResponse
 from app.schemas.user import UserCreate, UserInDB, UserRead
@@ -33,10 +42,17 @@ __all__ = [
     "BookGroupSummary",
     "BookGroupUpdate",
     "BookGroupAssignmentUpdate",
+    "BookshelfPreferences",
+    "BookshelfPreferencesPatch",
+    "ReaderPreferences",
+    "ReaderPreferencesPatch",
     "ReadingProgressCreate",
     "ReadingProgressRead",
     "ReadingProgressSyncRequest",
     "ReadingProgressUpdate",
+    "UserPreferencesDocument",
+    "UserPreferencesPatchRequest",
+    "UserPreferencesResponse",
     "ChapterRuleCreate",
     "ChapterRuleRead",
     "ChapterRuleUpdate",

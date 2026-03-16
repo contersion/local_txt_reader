@@ -246,15 +246,18 @@ import { resolveApiAssetUrl, ApiError, getErrorMessage } from "../api/client";
 import BookGroupManagerModal from "../components/BookGroupManagerModal.vue";
 import BookGroupSelectorModal from "../components/BookGroupSelectorModal.vue";
 import type { BookGroup, BookShelfItem, BookSortKey } from "../types/api";
+import { usePreferencesStore } from "../stores/preferences";
 import { clampPercentage, formatDateTime, formatNumber, formatPercent, formatWordCount } from "../utils/format";
 
 const router = useRouter();
 const message = useMessage();
+const preferencesStore = usePreferencesStore();
 const BOOK_METADATA_UPDATED_EVENT = "books:metadata-updated";
 const uploadRef = ref<UploadInst | null>(null);
 const books = ref<BookShelfItem[]>([]);
 const groups = ref<BookGroup[]>([]);
-const searchKeyword = ref("");
+const searchKeyword = ref(preferencesStore.bookshelf.search);
+const appliedSearch = ref(preferencesStore.bookshelf.search);
 const loading = ref(false);
 const uploading = ref(false);
 const errorMessage = ref<string | null>(null);
@@ -262,8 +265,8 @@ const groupWarningMessage = ref<string | null>(null);
 const deletingBookId = ref<number | null>(null);
 const continuingBookId = ref<number | null>(null);
 const isEditMode = ref(false);
-const activeFilter = ref("all");
-const sortKey = ref<BookSortKey>("created_at");
+const activeFilter = ref(getFilterKeyFromGroupId(preferencesStore.bookshelf.groupId));
+const sortKey = ref<BookSortKey>(preferencesStore.bookshelf.sort);
 const groupManagerVisible = ref(false);
 const groupSelectorVisible = ref(false);
 const managingBook = ref<BookShelfItem | null>(null);
@@ -287,7 +290,7 @@ const filterOptions = computed(() => {
 const displayedBooks = computed(() => books.value);
 
 const emptyDescription = computed(() => {
-  if (searchKeyword.value.trim()) {
+  if (appliedSearch.value.trim()) {
     return "没有找到匹配的书籍，试试更短的关键词。";
   }
 
@@ -306,16 +309,32 @@ watch(groups, (currentGroups) => {
 
   if (!currentGroups.some((group) => group.id === groupId)) {
     activeFilter.value = "all";
+    preferencesStore.patchBookshelf({
+      groupId: null,
+      page: 1,
+    });
   }
 });
 
 watch(activeFilter, () => {
-  void loadBooks(searchKeyword.value);
+  preferencesStore.patchBookshelf({
+    groupId: getActiveGroupId(activeFilter.value),
+    page: 1,
+  });
+  void loadBooks(appliedSearch.value);
 });
 
 watch(sortKey, () => {
-  void loadBooks(searchKeyword.value);
+  preferencesStore.patchBookshelf({
+    sort: sortKey.value,
+    page: 1,
+  });
+  void loadBooks(appliedSearch.value);
 });
+
+function getFilterKeyFromGroupId(groupId: number | null) {
+  return groupId ? `group:${groupId}` : "all";
+}
 
 function getActiveGroupId(filterKey: string) {
   if (!filterKey.startsWith("group:")) {
@@ -364,7 +383,7 @@ function resetUploadControl() {
   uploadRef.value?.clear();
 }
 
-async function loadBooks(search = searchKeyword.value.trim()) {
+async function loadBooks(search = appliedSearch.value.trim()) {
   loading.value = true;
   errorMessage.value = null;
 
@@ -394,15 +413,27 @@ async function loadGroups() {
 }
 
 async function loadPage() {
-  await Promise.all([loadBooks(searchKeyword.value), loadGroups()]);
+  await Promise.all([loadBooks(appliedSearch.value), loadGroups()]);
 }
 
 function handleSearch() {
-  void loadBooks(searchKeyword.value);
+  const normalizedSearch = searchKeyword.value.trim();
+  searchKeyword.value = normalizedSearch;
+  appliedSearch.value = normalizedSearch;
+  preferencesStore.patchBookshelf({
+    search: normalizedSearch,
+    page: 1,
+  });
+  void loadBooks(normalizedSearch);
 }
 
 function handleClearSearch() {
   searchKeyword.value = "";
+  appliedSearch.value = "";
+  preferencesStore.patchBookshelf({
+    search: "",
+    page: 1,
+  });
   void loadBooks("");
 }
 
@@ -454,7 +485,7 @@ async function handleDelete(book: BookShelfItem) {
   try {
     await booksApi.delete(book.id);
     message.success(`已删除《${book.title}》`);
-    await Promise.all([loadBooks(searchKeyword.value), loadGroups()]);
+    await Promise.all([loadBooks(appliedSearch.value), loadGroups()]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -509,7 +540,7 @@ async function handleRenameGroup(payload: { groupId: number; name: string }) {
   try {
     await bookGroupsApi.update(payload.groupId, { name: payload.name });
     message.success("分组已重命名");
-    await Promise.all([loadGroups(), loadBooks(searchKeyword.value)]);
+    await Promise.all([loadGroups(), loadBooks(appliedSearch.value)]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -523,7 +554,7 @@ async function handleDeleteGroup(groupId: number) {
   try {
     await bookGroupsApi.remove(groupId);
     message.success("分组已删除");
-    await Promise.all([loadGroups(), loadBooks(searchKeyword.value)]);
+    await Promise.all([loadGroups(), loadBooks(appliedSearch.value)]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -555,7 +586,7 @@ async function handleSubmitBookGroups(groupIds: number[]) {
     await booksApi.updateGroups(managingBook.value.id, { group_ids: groupIds });
     message.success(`已更新《${managingBook.value.title}》的分组`);
     groupSelectorVisible.value = false;
-    await Promise.all([loadBooks(searchKeyword.value), loadGroups()]);
+    await Promise.all([loadBooks(appliedSearch.value), loadGroups()]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -564,7 +595,7 @@ async function handleSubmitBookGroups(groupIds: number[]) {
 }
 
 function handleMetadataUpdated() {
-  void loadBooks(searchKeyword.value);
+  void loadBooks(appliedSearch.value);
 }
 
 onMounted(() => {

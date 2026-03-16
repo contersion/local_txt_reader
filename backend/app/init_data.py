@@ -87,14 +87,21 @@ def bootstrap_application() -> None:
 
 def _apply_sqlite_compat_migrations() -> None:
     inspector = inspect(database.engine)
-    if "books" not in inspector.get_table_names():
+    table_names = set(inspector.get_table_names())
+    if "books" not in table_names and "users" not in table_names:
         return
 
-    existing_columns = {column["name"] for column in inspector.get_columns("books")}
     statements: list[str] = []
 
-    if "cover_path" not in existing_columns:
-        statements.append("ALTER TABLE books ADD COLUMN cover_path VARCHAR(500)")
+    if "books" in table_names:
+        book_columns = {column["name"] for column in inspector.get_columns("books")}
+        if "cover_path" not in book_columns:
+            statements.append("ALTER TABLE books ADD COLUMN cover_path VARCHAR(500)")
+
+    if "users" in table_names:
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "preferences_json" not in user_columns:
+            statements.append("ALTER TABLE users ADD COLUMN preferences_json TEXT")
 
     if not statements:
         return

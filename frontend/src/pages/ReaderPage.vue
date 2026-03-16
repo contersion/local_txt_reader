@@ -115,7 +115,16 @@
             class="reader-content"
             :class="{ 'reader-content--dimmed': chapterLoading }"
           >
-            {{ currentChapter ? currentChapterBody : '正文载入中...' }}
+            <template v-if="currentChapter">
+              <p
+                v-for="(paragraph, index) in currentChapterParagraphs"
+                :key="`paragraph-${currentChapterIndex}-${index}`"
+                class="reader-content__paragraph"
+              >
+                {{ paragraph }}
+              </p>
+            </template>
+            <template v-else>正文载入中...</template>
           </article>
           <section v-if="isCompactViewport" class="reader-paper__chapter-nav" @click.stop>
             <div class="reader-paper__chapter-actions">
@@ -241,6 +250,30 @@
                 </n-space>
               </n-radio-group>
             </section>
+
+            <section class="reader-settings__group">
+              <div class="reader-settings__label-row">
+                <span>字间距</span>
+                <strong>{{ preferences.letterSpacing.toFixed(2) }}px</strong>
+              </div>
+              <n-slider v-model:value="preferences.letterSpacing" :step="0.05" :min="0" :max="2" />
+            </section>
+
+            <section class="reader-settings__group">
+              <div class="reader-settings__label-row">
+                <span>段间距</span>
+                <strong>{{ preferences.paragraphSpacing.toFixed(2) }}x</strong>
+              </div>
+              <n-slider v-model:value="preferences.paragraphSpacing" :step="0.05" :min="0" :max="2.5" />
+            </section>
+
+            <section class="reader-settings__group">
+              <div class="reader-settings__label-row">
+                <span>阅读宽度</span>
+                <strong>{{ preferences.contentWidth }}ch</strong>
+              </div>
+              <n-slider v-model:value="preferences.contentWidth" :step="1" :min="56" :max="96" />
+            </section>
           </div>
         </template>
       </n-drawer-content>
@@ -265,6 +298,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import { booksApi } from "../api/books";
 import { API_BASE_URL, ApiError, getErrorMessage } from "../api/client";
+import { usePreferencesStore } from "../stores/preferences";
 import type {
   BookChapter,
   BookChapterContent,
@@ -275,19 +309,12 @@ import PageStatusPanel from "../components/PageStatusPanel.vue";
 import { formatPercent } from "../utils/format";
 import { authTokenStorage } from "../utils/token";
 
-const READER_PREFERENCES_KEY = "txt-reader.preferences";
 const PROGRESS_THROTTLE_MS = 15000;
 const READER_SCROLL_ANCHOR = 120;
 const COMPACT_BREAKPOINT = 980;
 
 type ProgressSnapshot = ReadingProgressPayload;
 type ReaderDrawerView = "catalog" | "settings";
-
-interface ReaderPreferences {
-  fontSize: number;
-  lineHeight: number;
-  theme: "light" | "dark";
-}
 
 interface RouteChapterState {
   provided: boolean;
@@ -299,12 +326,6 @@ interface ReaderChapterContentView {
   body: string;
   trimmedPrefixLength: number;
 }
-
-const DEFAULT_PREFERENCES: ReaderPreferences = {
-  fontSize: 19,
-  lineHeight: 1.95,
-  theme: "light",
-};
 
 const props = withDefaults(
   defineProps<{
@@ -318,6 +339,7 @@ const props = withDefaults(
 
 const route = useRoute();
 const router = useRouter();
+const preferencesStore = usePreferencesStore();
 const chapters = ref<BookChapter[]>([]);
 const bookTitle = ref("");
 const progress = ref<ReadingProgress | null>(null);
@@ -330,7 +352,9 @@ const chapterLoading = ref(false);
 const pageError = ref<string | null>(null);
 const chapterError = ref<string | null>(null);
 const syncState = ref<"idle" | "pending" | "syncing" | "error">("idle");
-const preferences = reactive<ReaderPreferences>(loadStoredPreferences());
+const preferences = reactive({
+  ...preferencesStore.reader,
+});
 const contentRef = ref<HTMLElement | null>(null);
 const activeDrawer = ref<ReaderDrawerView | null>(null);
 const mobileChromeVisible = ref(false);
@@ -376,6 +400,7 @@ const currentChapterContentView = computed<ReaderChapterContentView>(() => {
   );
 });
 const currentChapterBody = computed(() => currentChapterContentView.value.body);
+const currentChapterParagraphs = computed(() => buildReaderParagraphs(currentChapterBody.value));
 const currentChapterTrimmedPrefixLength = computed(() => currentChapterContentView.value.trimmedPrefixLength);
 const currentChapterPositionLabel = computed(() => {
   if (chapters.value.length === 0) {
@@ -444,16 +469,15 @@ const canGoNext = computed(() => currentChapterIndex.value < chapters.value.leng
 const readerStyleVars = computed(() => ({
   "--reader-font-size": `${preferences.fontSize}px`,
   "--reader-line-height": String(preferences.lineHeight),
+  "--reader-letter-spacing": `${preferences.letterSpacing}px`,
+  "--reader-paragraph-spacing": String(preferences.paragraphSpacing),
+  "--reader-content-width": `${preferences.contentWidth}ch`,
 }));
 
 watch(
   preferences,
   (value) => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(READER_PREFERENCES_KEY, JSON.stringify(value));
+    preferencesStore.patchReader(value);
   },
   { deep: true },
 );
@@ -513,45 +537,12 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleWindowResize);
   window.removeEventListener("scroll", handleWindowScroll);
   window.removeEventListener("pagehide", handlePageHide);
+
+  void preferencesStore.flushPendingPatch();
 });
-
-function loadStoredPreferences(): ReaderPreferences {
-  if (typeof window === "undefined") {
-    return { ...DEFAULT_PREFERENCES };
-  }
-
-  try {
-    const raw = window.localStorage.getItem(READER_PREFERENCES_KEY);
-    if (!raw) {
-      return { ...DEFAULT_PREFERENCES };
-    }
-
-    const parsed = JSON.parse(raw) as Partial<ReaderPreferences>;
-    return {
-      fontSize: clampNumber(parsed.fontSize, 15, 28, DEFAULT_PREFERENCES.fontSize),
-      lineHeight: clampNumber(parsed.lineHeight, 1.45, 2.5, DEFAULT_PREFERENCES.lineHeight),
-      theme: parsed.theme === "dark" ? "dark" : "light",
-    };
-  } catch {
-    return { ...DEFAULT_PREFERENCES };
-  }
-}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
-}
-
-function clampNumber(
-  value: number | undefined,
-  min: number,
-  max: number,
-  fallback: number,
-) {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return fallback;
-  }
-
-  return clamp(value, min, max);
 }
 
 function roundPercent(value: number) {
@@ -631,6 +622,19 @@ function buildReaderChapterContentView(content: string, chapterTitle: string): R
     body: normalizedContent.slice(bodyStart),
     trimmedPrefixLength: bodyStart,
   };
+}
+
+function buildReaderParagraphs(content: string) {
+  if (!content) {
+    return [];
+  }
+
+  const paragraphs = content
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trimEnd());
+
+  return paragraphs.length > 0 ? paragraphs : [content];
 }
 
 function isReaderChapterWhitespace(character: string) {
@@ -1064,6 +1068,8 @@ function handleWindowScroll() {
 }
 
 function handlePageHide() {
+  void preferencesStore.flushPendingPatch();
+
   if (!hasMeaningfulReadingActivity.value) {
     return;
   }
@@ -1117,6 +1123,9 @@ function goBack() {
 .reader-page {
   --reader-font-size: 19px;
   --reader-line-height: 1.95;
+   --reader-letter-spacing: 0px;
+   --reader-paragraph-spacing: 1;
+   --reader-content-width: 72ch;
   --reader-column-max: 960px;
   --reader-side-width: 192px;
   --reader-side-gap: clamp(18px, 2vw, 24px);
@@ -1448,14 +1457,24 @@ function goBack() {
 
 .reader-content {
   position: relative;
-  max-width: 72ch;
+  max-width: var(--reader-content-width);
   margin: 0 auto;
   color: var(--reader-body);
   font-size: var(--reader-font-size);
   line-height: var(--reader-line-height);
-  white-space: pre-wrap;
+  letter-spacing: var(--reader-letter-spacing);
   word-break: break-word;
   transition: opacity 180ms ease;
+}
+
+.reader-content__paragraph {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reader-content__paragraph + .reader-content__paragraph {
+  margin-top: calc(var(--reader-font-size) * var(--reader-line-height) * var(--reader-paragraph-spacing));
 }
 
 .reader-content--dimmed {

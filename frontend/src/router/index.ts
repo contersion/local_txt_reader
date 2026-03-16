@@ -8,6 +8,7 @@ import ReaderPage from "../pages/ReaderPage.vue";
 import RuleManagementPage from "../pages/RuleManagementPage.vue";
 import { pinia } from "../stores";
 import { useAuthStore } from "../stores/auth";
+import { usePreferencesStore } from "../stores/preferences";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -87,7 +88,12 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore(pinia);
+  const preferencesStore = usePreferencesStore(pinia);
   await authStore.ensureReady();
+
+  if (!authStore.isAuthenticated) {
+    preferencesStore.resetState();
+  }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return {
@@ -102,6 +108,10 @@ router.beforeEach(async (to) => {
     return {
       name: "books",
     };
+  }
+
+  if (to.meta.requiresAuth && authStore.isAuthenticated) {
+    await preferencesStore.ensureReady();
   }
 
   const pageTitle = to.meta.title ? `${String(to.meta.title)} - TXT Reader` : "TXT Reader";

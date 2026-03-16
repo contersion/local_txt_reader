@@ -182,3 +182,53 @@ export interface BookReparseResponse {
   total_chapters: number;
   chapters: BookReparseChapterSummary[];
 }
+
+export interface ApiBookshelfPreferences {
+  sort: BookSortKey;
+  search: string;
+  group_id: number | null;
+  page: number;
+  page_size: number | null;
+}
+
+export interface ApiReaderPreferences {
+  font_size: number;
+  line_height: number;
+  letter_spacing: number;
+  paragraph_spacing: number;
+  content_width: number;
+  theme: "light" | "dark";
+}
+
+export interface ApiUserPreferencesDocument {
+  version: number;
+  bookshelf: ApiBookshelfPreferences;
+  reader: ApiReaderPreferences;
+}
+
+export interface ApiBookshelfPreferencesPatch {
+  sort?: BookSortKey;
+  search?: string | null;
+  group_id?: number | null;
+  page?: number;
+  page_size?: number | null;
+}
+
+export interface ApiReaderPreferencesPatch {
+  font_size?: number;
+  line_height?: number;
+  letter_spacing?: number;
+  paragraph_spacing?: number;
+  content_width?: number;
+  theme?: "light" | "dark";
+}
+
+export interface ApiUserPreferencesPatchRequest {
+  bookshelf?: ApiBookshelfPreferencesPatch;
+  reader?: ApiReaderPreferencesPatch;
+}
+
+export interface ApiUserPreferencesResponse {
+  has_saved_preferences: boolean;
+  preferences: ApiUserPreferencesDocument;
+}
