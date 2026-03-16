@@ -1,38 +1,35 @@
 import { authTokenStorage } from "../utils/token";
 import type { ApiErrorResponse } from "../types/api";
+import { getActiveApiBaseUrl } from "../utils/backend";
 
-const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-function isLoopbackHostname(hostname: string) {
-  return LOOPBACK_HOSTNAMES.has(hostname.trim().toLowerCase());
+function getFallbackOrigin() {
+  return typeof window === "undefined" ? "http://127.0.0.1" : window.location.origin;
 }
 
-function resolveApiBaseUrl() {
-  const rawApiBaseUrl = typeof import.meta.env.VITE_API_BASE_URL === "string"
-    ? import.meta.env.VITE_API_BASE_URL.trim()
-    : "";
-
-  if (!rawApiBaseUrl) {
-    return "";
-  }
-
-  if (typeof window !== "undefined") {
-    try {
-      const configuredUrl = new URL(rawApiBaseUrl, window.location.origin);
-      const currentHostname = window.location.hostname;
-
-      if (isLoopbackHostname(configuredUrl.hostname) && !isLoopbackHostname(currentHostname)) {
-        return "";
-      }
-    } catch {
-      // Keep the original value when the URL cannot be parsed.
-    }
-  }
-
-  return rawApiBaseUrl.replace(/\/$/, "");
+function trimTrailingSlashes(value: string) {
+  return value.replace(/\/+$/, "");
 }
 
-export const API_BASE_URL = resolveApiBaseUrl();
+function buildBaseAwareUrl(baseUrl: string, path: string) {
+  if (!baseUrl) {
+    return new URL(path, getFallbackOrigin()).toString();
+  }
+
+  if (/^https?:\/\//i.test(baseUrl)) {
+    return `${trimTrailingSlashes(baseUrl)}${path}`;
+  }
+
+  const resolvedBaseUrl = new URL(baseUrl, getFallbackOrigin());
+  const normalizedBasePath = trimTrailingSlashes(resolvedBaseUrl.pathname);
+  resolvedBaseUrl.pathname = `${normalizedBasePath}${path}`;
+  resolvedBaseUrl.search = "";
+  resolvedBaseUrl.hash = "";
+  return resolvedBaseUrl.toString();
+}
+
+export function getApiBaseUrl() {
+  return getActiveApiBaseUrl();
+}
 
 export function resolveApiAssetUrl(path: string | null | undefined) {
   if (!path) {
@@ -43,11 +40,13 @@ export function resolveApiAssetUrl(path: string | null | undefined) {
     return path;
   }
 
+  const apiBaseUrl = getApiBaseUrl();
+
   if (path.startsWith("/")) {
-    return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+    return apiBaseUrl ? buildBaseAwareUrl(apiBaseUrl, path) : path;
   }
 
-  return API_BASE_URL ? `${API_BASE_URL}/${path}` : `/${path}`;
+  return apiBaseUrl ? buildBaseAwareUrl(apiBaseUrl, `/${path}`) : `/${path}`;
 }
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -104,11 +103,11 @@ function formatErrorDetail(detail: ApiErrorResponse["detail"]) {
   return "请求失败，请稍后再试";
 }
 
-function buildUrl(path: string, query?: Record<string, QueryValue>) {
+export function buildApiUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = API_BASE_URL
-    ? new URL(`${API_BASE_URL}${normalizedPath}`)
-    : new URL(normalizedPath, typeof window === "undefined" ? "http://127.0.0.1" : window.location.origin);
+  const url = new URL(
+    buildBaseAwareUrl(getApiBaseUrl(), normalizedPath),
+  );
 
   Object.entries(query || {}).forEach(([key, value]) => {
     if (value === null || value === undefined || value === "") {
@@ -150,7 +149,7 @@ async function request<T>(path: string, options: RequestOptions = {}) {
   let response: Response;
 
   try {
-    response = await fetch(buildUrl(path, query), {
+    response = await fetch(buildApiUrl(path, query), {
       method,
       headers: requestHeaders,
       body: payload,

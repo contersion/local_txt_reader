@@ -297,7 +297,7 @@ import {
 import { useRoute, useRouter } from "vue-router";
 
 import { booksApi } from "../api/books";
-import { API_BASE_URL, ApiError, getErrorMessage } from "../api/client";
+import { ApiError, buildApiUrl, getErrorMessage } from "../api/client";
 import { usePreferencesStore } from "../stores/preferences";
 import type {
   BookChapter,
@@ -975,7 +975,7 @@ function attemptKeepaliveProgressSave(snapshot: ProgressSnapshot) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  void fetch(`${API_BASE_URL}/api/books/${props.bookId}/progress`, {
+  void fetch(buildApiUrl(`/api/books/${props.bookId}/progress`), {
     method: "PUT",
     headers,
     body: JSON.stringify(snapshot),

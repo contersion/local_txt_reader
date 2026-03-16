@@ -11,7 +11,10 @@
 
           <n-space vertical :size="12">
             <n-alert type="info" :show-icon="false">
-              后端默认账号：<strong>admin</strong> / <strong>admin123</strong>
+              当前后端：<strong>{{ activeBackendSummary }}</strong>
+            </n-alert>
+            <n-alert type="warning" :show-icon="false">
+              默认账号取决于当前后端的初始化配置，请以目标后端的实际账号为准。
             </n-alert>
             <n-alert type="success" :show-icon="false">
               已启用登录态恢复与路由守卫，刷新后会自动尝试恢复会话。
@@ -38,11 +41,21 @@
       <n-grid-item>
         <n-card class="login-page__card" :bordered="false">
           <n-space vertical :size="18">
-            <div>
-              <h2 class="login-page__form-title">登录</h2>
-              <p class="login-page__form-subtitle">
-                {{ redirectHint }}
-              </p>
+            <div class="login-page__form-head">
+              <div>
+                <h2 class="login-page__form-title">登录</h2>
+                <p class="login-page__form-subtitle">
+                  {{ redirectHint }}
+                </p>
+              </div>
+
+              <n-button secondary size="small" @click="backendModalVisible = true">
+                切换后端
+              </n-button>
+            </div>
+
+            <div class="login-page__backend-summary">
+              当前连接：{{ activeBackendSummary }}
             </div>
 
             <n-alert
@@ -94,11 +107,13 @@
         </n-card>
       </n-grid-item>
     </n-grid>
+
+    <backend-switch-modal v-model:show="backendModalVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   NAlert,
   NButton,
@@ -113,17 +128,22 @@ import {
 } from "naive-ui";
 import { useRoute, useRouter } from "vue-router";
 
+import BackendSwitchModal from "../components/BackendSwitchModal.vue";
 import { useAuthStore } from "../stores/auth";
+import { consumeBackendNotice, getBackendDisplaySummary } from "../utils/backend";
 
 const authStore = useAuthStore();
 const message = useMessage();
 const route = useRoute();
 const router = useRouter();
+const backendModalVisible = ref(false);
 
 const form = reactive({
-  username: "admin",
-  password: "admin123",
+  username: "",
+  password: "",
 });
+
+const activeBackendSummary = computed(() => getBackendDisplaySummary());
 
 const redirectHint = computed(() => {
   if (typeof route.query.redirect === "string" && route.query.redirect !== "/books") {
@@ -137,6 +157,25 @@ function clearError() {
   if (authStore.errorMessage) {
     authStore.setError(null);
   }
+}
+
+function showBackendNotice() {
+  const notice = consumeBackendNotice();
+  if (!notice) {
+    return;
+  }
+
+  if (notice.type === "error") {
+    message.error(notice.text);
+    return;
+  }
+
+  if (notice.type === "info") {
+    message.info(notice.text);
+    return;
+  }
+
+  message.success(notice.text);
 }
 
 async function handleLogin() {
@@ -159,6 +198,10 @@ async function handleLogin() {
     await router.push(redirect);
   } catch {}
 }
+
+onMounted(() => {
+  showBackendNotice();
+});
 </script>
 
 <style scoped>
@@ -220,6 +263,13 @@ async function handleLogin() {
   font-size: 28px;
 }
 
+.login-page__form-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
 .login-page__card {
   background: color-mix(in srgb, var(--surface-color) 94%, white 6%);
   box-shadow: var(--surface-shadow);
@@ -257,10 +307,21 @@ async function handleLogin() {
   line-height: 1.7;
 }
 
+.login-page__backend-summary {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 @media (max-width: 1023px) {
   .login-page {
     min-height: auto;
     padding: 24px 0 40px;
+  }
+
+  .login-page__form-head {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

@@ -1,71 +1,77 @@
 <template>
   <div class="bookshelf-page">
-    <header class="bookshelf-page__header">
-      <div class="bookshelf-page__title-wrap">
-        <h1 class="bookshelf-page__title">书架</h1>
-        <span class="bookshelf-page__count">{{ displayedBooks.length }}</span>
-      </div>
-
-      <div class="bookshelf-page__header-actions">
-        <n-button quaternary size="small" :loading="loading" @click="handleRefresh">刷新</n-button>
-        <n-button quaternary size="small" :loading="groupMutationPending" @click="groupManagerVisible = true">
-          分组管理
-        </n-button>
-        <n-button quaternary size="small" @click="toggleEditMode">
-          {{ isEditMode ? "完成" : "编辑" }}
-        </n-button>
-        <n-upload
-          ref="uploadRef"
-          accept=".txt,text/plain"
-          :show-file-list="false"
-          :max="1"
-          :custom-request="handleUpload"
-        >
-          <n-button type="primary" secondary size="small" :loading="uploading">上传 TXT</n-button>
-        </n-upload>
-      </div>
-    </header>
-
-    <section class="bookshelf-page__controls">
-      <div class="bookshelf-page__filter-bar">
-        <div class="bookshelf-page__tabs-wrap">
-          <div class="bookshelf-page__tabs" role="tablist" aria-label="书架分组筛选">
-            <button
-              v-for="filter in filterOptions"
-              :key="filter.key"
-              type="button"
-              class="bookshelf-page__tab"
-              :class="{ 'bookshelf-page__tab--active': activeFilter === filter.key }"
-              :aria-selected="activeFilter === filter.key"
-              @click="activeFilter = filter.key"
-            >
-              {{ filter.label }}
-            </button>
+    <section class="bookshelf-page__toolbar-panel">
+      <header class="bookshelf-page__header">
+        <div class="bookshelf-page__title-block">
+          <div class="bookshelf-page__title-wrap">
+            <h1 class="bookshelf-page__title">书架</h1>
+            <span class="bookshelf-page__count">{{ displayedBooks.length }}</span>
           </div>
+          <p class="bookshelf-page__subtitle">按分组、排序和关键词快速找到下一次继续阅读的位置。</p>
         </div>
 
-        <div class="bookshelf-page__filter-actions">
-          <n-select
-            v-model:value="sortKey"
-            size="small"
-            class="bookshelf-page__sort"
-            :options="sortOptions"
-            :consistent-menu-width="false"
-          />
+        <div class="bookshelf-page__header-actions">
+          <n-button quaternary size="medium" :loading="loading" @click="handleRefresh">刷新</n-button>
+          <n-button quaternary size="medium" :loading="groupMutationPending" @click="groupManagerVisible = true">
+            分组管理
+          </n-button>
+          <n-button quaternary size="medium" @click="toggleEditMode">
+            {{ isEditMode ? "完成" : "编辑" }}
+          </n-button>
+          <n-upload
+            ref="uploadRef"
+            class="bookshelf-page__upload"
+            accept=".txt,text/plain"
+            :show-file-list="false"
+            :max="1"
+            :custom-request="handleUpload"
+          >
+            <n-button type="primary" secondary size="medium" :loading="uploading">上传 TXT</n-button>
+          </n-upload>
+        </div>
+      </header>
 
-          <div class="bookshelf-page__search">
-            <n-input
-              v-model:value="searchKeyword"
-              clearable
-              size="small"
-              placeholder="搜索书名"
-              @keydown.enter.prevent="handleSearch"
-              @clear="handleClearSearch"
+      <section class="bookshelf-page__controls">
+        <div class="bookshelf-page__filter-bar">
+          <div class="bookshelf-page__tabs-wrap">
+            <div class="bookshelf-page__tabs" role="tablist" aria-label="书架分组筛选">
+              <button
+                v-for="filter in filterOptions"
+                :key="filter.key"
+                type="button"
+                class="bookshelf-page__tab"
+                :class="{ 'bookshelf-page__tab--active': activeFilter === filter.key }"
+                :aria-selected="activeFilter === filter.key"
+                @click="activeFilter = filter.key"
+              >
+                {{ filter.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="bookshelf-page__filter-actions">
+            <n-select
+              v-model:value="sortKey"
+              size="medium"
+              class="bookshelf-page__sort"
+              :options="sortOptions"
+              :consistent-menu-width="false"
             />
-            <n-button secondary size="small" :loading="loading" @click="handleSearch">搜索</n-button>
+
+            <div class="bookshelf-page__search">
+              <n-input
+                v-model:value="searchKeyword"
+                clearable
+                size="medium"
+                placeholder="搜索书名"
+                @keydown.enter.prevent="handleSearch"
+                @clear="handleClearSearch"
+              />
+              <n-button secondary size="medium" :loading="loading" @click="handleSearch">搜索</n-button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </section>
 
     <n-alert v-if="errorMessage" type="error" :show-icon="false" class="bookshelf-page__alert">
@@ -618,7 +624,20 @@ onUnmounted(() => {
   width: min(100%, 1720px);
   margin: 0 auto;
   display: grid;
-  gap: 22px;
+  gap: var(--space-5);
+}
+
+.bookshelf-page__toolbar-panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: clamp(18px, 2.6vw, 24px);
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at top right, rgba(52, 107, 97, 0.08), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(184, 93, 54, 0.08), transparent 34%),
+    var(--surface-raised);
+  box-shadow: var(--shadow-soft);
 }
 
 .bookshelf-page__header {
@@ -626,8 +645,14 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 24px;
   align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(109, 90, 74, 0.1);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-color-soft);
+}
+
+.bookshelf-page__title-block {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
 }
 
 .bookshelf-page__title-wrap {
@@ -638,7 +663,7 @@ onUnmounted(() => {
 
 .bookshelf-page__title {
   margin: 0;
-  font-size: clamp(28px, 3vw, 38px);
+  font-size: var(--text-title-2);
   line-height: 1.08;
 }
 
@@ -648,24 +673,42 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+.bookshelf-page__subtitle {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
 .bookshelf-page__header-actions {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.bookshelf-page__header-actions :deep(.n-button) {
+  border-radius: var(--radius-md);
+}
+
+.bookshelf-page__upload {
+  flex: 0 0 auto;
+}
+
+.bookshelf-page__upload :deep(.n-button) {
+  width: 100%;
 }
 
 .bookshelf-page__controls {
   display: grid;
   gap: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(109, 90, 74, 0.1);
 }
 
 .bookshelf-page__filter-bar {
-  display: flex;
-  gap: 18px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
+  gap: var(--space-4);
+  align-items: end;
   min-width: 0;
 }
 
@@ -684,7 +727,10 @@ onUnmounted(() => {
   align-items: center;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.48);
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -695,10 +741,10 @@ onUnmounted(() => {
 
 .bookshelf-page__tab {
   flex: 0 0 auto;
-  min-height: 38px;
+  min-height: var(--control-height-sm);
   padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-secondary);
   font-size: 14px;
@@ -723,42 +769,53 @@ onUnmounted(() => {
 
 .bookshelf-page__tab--active {
   color: var(--primary-color);
-  background: rgba(184, 93, 54, 0.12);
-  border-color: rgba(184, 93, 54, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(184, 93, 54, 0.06);
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(184, 93, 54, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(184, 93, 54, 0.05),
+    0 6px 14px rgba(82, 55, 28, 0.06);
 }
 
 .bookshelf-page__filter-actions {
-  flex: 0 0 auto;
-  min-width: clamp(340px, 34vw, 520px);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  align-items: center;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: end;
 }
 
 .bookshelf-page__sort {
-  width: 138px;
-  flex: 0 0 auto;
+  width: 100%;
 }
 
 .bookshelf-page__search {
   width: 100%;
   min-width: 0;
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
 }
 
 .bookshelf-page__search :deep(.n-input) {
-  flex: 1 1 auto;
   min-width: 0;
 }
 
+.bookshelf-page__header-actions :deep(.n-button),
+.bookshelf-page__filter-actions :deep(.n-button),
+.bookshelf-page__filter-actions :deep(.n-base-selection),
+.bookshelf-page__filter-actions :deep(.n-input-wrapper) {
+  border-radius: var(--radius-md);
+}
+
+.bookshelf-page__filter-actions :deep(.n-base-selection),
+.bookshelf-page__filter-actions :deep(.n-input-wrapper) {
+  border-color: var(--border-color-soft);
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .bookshelf-page__search :deep(.n-button) {
-  flex: 0 0 auto;
-  min-width: 72px;
-  height: 34px;
+  min-width: 88px;
   white-space: nowrap;
 }
 
@@ -797,10 +854,10 @@ onUnmounted(() => {
   gap: 16px;
   align-items: start;
   padding: 18px;
-  border: 1px solid rgba(109, 90, 74, 0.1);
-  border-radius: 20px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
   background: rgba(255, 252, 247, 0.82);
-  box-shadow: 0 10px 28px rgba(82, 55, 28, 0.06);
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
   transition:
     border-color 180ms ease,
@@ -811,7 +868,7 @@ onUnmounted(() => {
 .bookshelf-item:hover {
   transform: translateY(-2px);
   border-color: rgba(184, 93, 54, 0.18);
-  box-shadow: 0 18px 34px rgba(82, 55, 28, 0.08);
+  box-shadow: var(--shadow-card);
 }
 
 .bookshelf-item--loading {
@@ -991,7 +1048,7 @@ onUnmounted(() => {
   }
 
   .bookshelf-page__filter-actions {
-    min-width: 320px;
+    grid-template-columns: 140px minmax(0, 1fr);
   }
 }
 
@@ -1005,15 +1062,24 @@ onUnmounted(() => {
     align-items: stretch;
   }
 
+  .bookshelf-page__header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bookshelf-page__upload {
+    width: 100%;
+  }
+
   .bookshelf-page__filter-bar {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: stretch;
     gap: 12px;
   }
 
   .bookshelf-page__filter-actions {
     min-width: 0;
-    flex-wrap: wrap;
+    grid-template-columns: 1fr;
   }
 
   .bookshelf-page__sort {
@@ -1037,6 +1103,10 @@ onUnmounted(() => {
 @media (max-width: 720px) {
   .bookshelf-page {
     gap: 16px;
+  }
+
+  .bookshelf-page__toolbar-panel {
+    padding: 16px;
   }
 
   .bookshelf-list {
@@ -1069,13 +1139,24 @@ onUnmounted(() => {
   }
 
   .bookshelf-page__tab {
-    min-height: 36px;
+    min-height: var(--control-height-sm);
     padding: 0 14px;
   }
 
+  .bookshelf-page__header-actions {
+    grid-template-columns: 1fr;
+  }
+
   .bookshelf-page__filter-actions {
-    display: grid;
     gap: 10px;
+  }
+
+  .bookshelf-page__search {
+    grid-template-columns: 1fr;
+  }
+
+  .bookshelf-page__search :deep(.n-button) {
+    width: 100%;
   }
 }
 </style>

@@ -1,39 +1,44 @@
 ﻿<template>
   <div class="rule-page">
-    <section class="rule-page__hero">
-      <div>
-        <div class="rule-page__eyebrow">Chapter Rules</div>
-        <h1 class="rule-page__title">把章节识别规则做成真正可管理、可验证的资产。</h1>
-        <p class="rule-page__description">
-          这里统一管理内置规则和你的自定义规则。你可以新增、编辑、删除自定义规则，快速切换默认规则，并直接在页面里验证规则是否真的匹配预期章节。        </p>
-      </div>
-
-      <div class="rule-page__stats">
-        <div class="rule-page__stat">
-          <span>规则总数</span>
-          <strong>{{ rules.length }}</strong>
+    <section class="rule-page__intro-stack">
+      <section class="rule-page__hero">
+        <div class="rule-page__hero-copy">
+          <div class="rule-page__eyebrow">Chapter Rules</div>
+          <h1 class="rule-page__title">把章节识别规则做成真正可管理、可验证的资产。</h1>
+          <p class="rule-page__description">
+            这里统一管理内置规则和你的自定义规则。你可以新增、编辑、删除自定义规则，快速切换默认规则，并直接在页面里验证规则是否真的匹配预期章节。
+          </p>
         </div>
-        <div class="rule-page__stat">
-          <span>内置规则</span>
-          <strong>{{ builtInRules.length }}</strong>
-        </div>
-        <div class="rule-page__stat">
-          <span>自定义规则</span>
-          <strong>{{ customRules.length }}</strong>
-        </div>
-      </div>
-    </section>
 
-    <section class="rule-page__toolbar">
-      <div class="rule-page__toolbar-note">
-        <span>当前默认规则</span>
-        <strong>{{ defaultRuleName }}</strong>
-      </div>
+        <div class="rule-page__hero-aside">
+          <div class="rule-page__stats">
+            <div class="rule-page__stat">
+              <span>规则总数</span>
+              <strong>{{ rules.length }}</strong>
+            </div>
+            <div class="rule-page__stat">
+              <span>内置规则</span>
+              <strong>{{ builtInRules.length }}</strong>
+            </div>
+            <div class="rule-page__stat">
+              <span>自定义规则</span>
+              <strong>{{ customRules.length }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div class="rule-page__toolbar-actions">
-        <n-button secondary :loading="loading" @click="loadInitialData">刷新页面</n-button>
-        <n-button type="primary" @click="openCreateModal">新增自定义规则</n-button>
-      </div>
+      <section class="rule-page__toolbar">
+        <div class="rule-page__toolbar-note">
+          <span>当前默认规则</span>
+          <strong>{{ defaultRuleName }}</strong>
+        </div>
+
+        <div class="rule-page__toolbar-actions">
+          <n-button secondary :loading="loading" @click="loadInitialData">刷新页面</n-button>
+          <n-button type="primary" @click="openCreateModal">新增自定义规则</n-button>
+        </div>
+      </section>
     </section>
 
     <n-alert v-if="pageError" type="error" :show-icon="false" class="rule-page__alert">
@@ -49,6 +54,67 @@
       </template>
 
       <n-empty v-if="!loading && rules.length === 0" description="还没有可展示的规则。" />
+
+      <div v-else-if="isMobileViewport" class="rule-mobile-list" aria-label="规则卡片列表">
+        <article
+          v-for="rule in rules"
+          :key="`mobile-rule-${rule.id}`"
+          class="rule-mobile-card"
+        >
+          <div class="rule-mobile-card__header">
+            <div class="rule-mobile-card__title-block">
+              <strong class="rule-mobile-card__title">{{ rule.rule_name }}</strong>
+              <span class="rule-mobile-card__time">{{ formatDate(rule.updated_at) }}</span>
+            </div>
+
+            <div class="rule-mobile-card__badges">
+              <n-tag size="small" round :bordered="false" :type="rule.is_builtin ? 'warning' : 'info'">
+                {{ rule.is_builtin ? "内置" : "自定义" }}
+              </n-tag>
+              <n-tag v-if="rule.is_default" size="small" round :bordered="false" type="success">
+                当前默认
+              </n-tag>
+            </div>
+          </div>
+
+          <div class="rule-mobile-card__section">
+            <span class="rule-mobile-card__label">Regex</span>
+            <code class="rule-code-block">{{ rule.regex_pattern }}</code>
+          </div>
+
+          <div class="rule-mobile-card__meta">
+            <div class="rule-mobile-card__section">
+              <span class="rule-mobile-card__label">Flags</span>
+              <span class="rule-mobile-card__value">{{ rule.flags || "无 flags" }}</span>
+            </div>
+            <div class="rule-mobile-card__section">
+              <span class="rule-mobile-card__label">说明</span>
+              <p class="rule-mobile-card__description">{{ rule.description || "暂无说明" }}</p>
+            </div>
+          </div>
+
+          <div class="rule-mobile-card__actions">
+            <n-button block secondary @click="loadRuleIntoTest(rule)">带入测试</n-button>
+            <n-button block tertiary @click="loadRuleIntoApply(rule)">应用到书</n-button>
+            <n-button
+              block
+              :secondary="!rule.is_default"
+              :type="rule.is_default ? 'success' : 'primary'"
+              :disabled="rule.is_default"
+              @click="() => { void handleSetDefault(rule); }"
+            >
+              {{ rule.is_default ? "默认中" : "设为默认" }}
+            </n-button>
+            <n-button v-if="!rule.is_builtin" block tertiary @click="openEditModal(rule)">编辑</n-button>
+            <n-popconfirm v-if="!rule.is_builtin" @positive-click="() => { void handleDelete(rule); }">
+              <template #trigger>
+                <n-button block tertiary type="error">删除</n-button>
+              </template>
+              删除后无法恢复，确认继续吗？
+            </n-popconfirm>
+          </div>
+        </article>
+      </div>
 
       <div v-else class="rule-page__table-wrap">
         <n-data-table
@@ -164,7 +230,28 @@
             />
 
             <template v-else>
-              <div class="rule-apply__table-wrap">
+              <div v-if="isMobileViewport" class="rule-mobile-result-list">
+                <article
+                  v-for="chapter in applyPreviewChapters"
+                  :key="`${chapter.chapter_index}-${chapter.start_offset}`"
+                  class="rule-mobile-result-card"
+                >
+                  <div class="rule-mobile-result-card__row">
+                    <span>chapter_index</span>
+                    <strong>{{ chapter.chapter_index }}</strong>
+                  </div>
+                  <div class="rule-mobile-result-card__block">
+                    <span>chapter_title</span>
+                    <code class="rule-code-block">{{ chapter.chapter_title }}</code>
+                  </div>
+                  <div class="rule-mobile-result-card__row">
+                    <span>offset</span>
+                    <strong>{{ chapter.start_offset }} - {{ chapter.end_offset }}</strong>
+                  </div>
+                </article>
+              </div>
+
+              <div v-else class="rule-apply__table-wrap">
                 <n-table striped :single-line="false">
                   <thead>
                     <tr>
@@ -336,6 +423,27 @@
               class="rule-test__empty"
             />
 
+            <div v-else-if="isMobileViewport" class="rule-mobile-result-list">
+              <article
+                v-for="(item, index) in testResult.items"
+                :key="`${item.start}-${item.end}-${index}`"
+                class="rule-mobile-result-card"
+              >
+                <div class="rule-mobile-result-card__block">
+                  <span>匹配文本</span>
+                  <code class="rule-code-block">{{ item.text }}</code>
+                </div>
+                <div class="rule-mobile-result-card__row">
+                  <span>start</span>
+                  <strong>{{ item.start }}</strong>
+                </div>
+                <div class="rule-mobile-result-card__row">
+                  <span>end</span>
+                  <strong>{{ item.end }}</strong>
+                </div>
+              </article>
+            </div>
+
             <div v-else class="rule-test__table-wrap">
               <n-table striped :single-line="false">
                 <thead>
@@ -443,7 +551,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref } from "vue";
+import { computed, h, onMounted, onUnmounted, reactive, ref } from "vue";
 import {
   NAlert,
   NButton,
@@ -505,6 +613,8 @@ interface QuickApplyState {
   book_id: number | null;
 }
 
+const MOBILE_BREAKPOINT = 720;
+
 const regexExamples: RegexExample[] = [
   {
     label: "中文章节",
@@ -531,6 +641,7 @@ const booksLoading = ref(false);
 const submitting = ref(false);
 const testPending = ref(false);
 const applyPending = ref(false);
+const viewportWidth = ref(typeof window === "undefined" ? MOBILE_BREAKPOINT + 1 : window.innerWidth);
 const pageError = ref<string | null>(null);
 const booksError = ref<string | null>(null);
 const testErrorMessage = ref<string | null>(null);
@@ -596,6 +707,7 @@ const applyResultRuleName = computed(() => {
 const applyPreviewChapters = computed(() => {
   return (applyResult.value?.chapters || []).slice(0, 6);
 });
+const isMobileViewport = computed(() => viewportWidth.value <= MOBILE_BREAKPOINT);
 
 function createEmptyForm(): RuleFormModel {
   return {
@@ -629,6 +741,14 @@ function formatDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function handleWindowResize() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  viewportWidth.value = window.innerWidth;
 }
 
 function applyExampleToForm(example: RegexExample) {
@@ -1043,32 +1163,81 @@ const columns = computed<DataTableColumns<ChapterRule>>(() => [
 ]);
 
 onMounted(() => {
+  if (typeof window !== "undefined") {
+    viewportWidth.value = window.innerWidth;
+    window.addEventListener("resize", handleWindowResize, { passive: true });
+  }
+
   void loadInitialData();
+});
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", handleWindowResize);
+  }
 });
 </script>
 
 <style scoped>
 .rule-page {
+  width: min(100%, 1720px);
+  margin: 0 auto;
   display: grid;
-  gap: 24px;
+  gap: var(--space-5);
+}
+
+.rule-page__intro-stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rule-page,
+.rule-page__intro-stack,
+.rule-page__hero,
+.rule-page__hero-copy,
+.rule-page__hero-aside,
+.rule-page__toolbar,
+.rule-page__table-wrap,
+.rule-test,
+.rule-apply,
+.rule-test__form,
+.rule-test__result,
+.rule-apply__form,
+.rule-apply__result,
+.rule-mobile-list,
+.rule-mobile-card,
+.rule-mobile-result-list,
+.rule-mobile-result-card {
+  min-width: 0;
 }
 
 .rule-page__hero {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.75fr);
   gap: 24px;
-  padding: clamp(24px, 4vw, 32px);
-  border-radius: 28px;
+  align-items: start;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-xl);
   background:
-    radial-gradient(circle at top right, rgba(52, 107, 97, 0.18), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(184, 93, 54, 0.14), transparent 30%),
-    color-mix(in srgb, var(--surface-color) 92%, white 8%);
-  box-shadow: var(--surface-shadow);
+    radial-gradient(circle at top right, rgba(52, 107, 97, 0.12), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(184, 93, 54, 0.1), transparent 30%),
+    var(--surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.rule-page__hero-copy {
+  min-width: 0;
+}
+
+.rule-page__hero-aside {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .rule-page__eyebrow {
   display: inline-flex;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   padding: 6px 12px;
   border-radius: 999px;
   background: rgba(52, 107, 97, 0.12);
@@ -1082,47 +1251,55 @@ onMounted(() => {
 .rule-page__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(30px, 4vw, 44px);
-  line-height: 1.08;
+  font-size: clamp(28px, 3.6vw, 38px);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
 }
 
 .rule-page__description {
-  max-width: 680px;
-  margin: 14px 0 0;
+  max-width: 54ch;
+  margin: 12px 0 0;
   color: var(--text-secondary);
-  line-height: 1.8;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
 }
 
 .rule-page__stats {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   min-width: 220px;
 }
 
 .rule-page__stat {
-  padding: 16px 18px;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.42);
+  padding: 14px 16px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.64);
 }
 
 .rule-page__stat span {
   display: block;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-caption);
 }
 
 .rule-page__stat strong {
   display: block;
-  margin-top: 6px;
-  font-size: 24px;
+  margin-top: 4px;
+  font-size: 22px;
+  line-height: 1.1;
 }
 
 .rule-page__toolbar {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
+  padding: 14px 18px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: var(--shadow-soft);
 }
 
 .rule-page__toolbar-note {
@@ -1132,11 +1309,12 @@ onMounted(() => {
 
 .rule-page__toolbar-note span {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-caption);
 }
 
 .rule-page__toolbar-note strong {
-  font-size: 18px;
+  font-size: 16px;
+  line-height: 1.45;
 }
 
 .rule-page__toolbar-actions {
@@ -1145,9 +1323,22 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.rule-page__toolbar-actions :deep(.n-button) {
+  border-radius: var(--radius-md);
+}
+
 .rule-page__alert,
 .rule-test__alert {
   border-radius: 18px;
+}
+
+.rule-page__table-card,
+.rule-page__apply-card,
+.rule-page__test-card {
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-xl);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
 }
 
 .rule-page__table-card :deep(.n-card-header),
@@ -1171,11 +1362,92 @@ onMounted(() => {
   overflow-x: auto;
 }
 
+.rule-mobile-list,
+.rule-mobile-result-list {
+  display: grid;
+  gap: 12px;
+}
+
+.rule-mobile-card,
+.rule-mobile-result-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.rule-mobile-card__header,
+.rule-mobile-card__meta,
+.rule-mobile-card__title-block,
+.rule-mobile-card__section {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-mobile-card__badges,
+.rule-mobile-card__actions {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-mobile-card__title {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.rule-mobile-card__time,
+.rule-mobile-card__label,
+.rule-mobile-card__value,
+.rule-mobile-result-card__row span,
+.rule-mobile-result-card__block span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.rule-mobile-card__description {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.75;
+}
+
+.rule-mobile-result-card__row,
+.rule-mobile-result-card__block {
+  display: grid;
+  gap: 6px;
+}
+
+.rule-mobile-result-card__row strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.rule-code-block {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-md);
+  background: rgba(46, 36, 29, 0.05);
+  color: var(--text-primary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: border-box;
+}
+
 .rule-form__intro {
   margin-bottom: 16px;
   padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .rule-form__intro p {
@@ -1251,8 +1523,9 @@ onMounted(() => {
 .rule-apply__form,
 .rule-apply__result {
   padding: 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .rule-test__lead,
@@ -1291,7 +1564,8 @@ onMounted(() => {
 .rule-test__summary-card,
 .rule-apply__summary-card {
   padding: 14px 16px;
-  border-radius: 18px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.78);
 }
 
@@ -1335,12 +1609,21 @@ onMounted(() => {
   padding: 18px 0 4px;
 }
 
+.rule-page :deep(.n-base-selection),
+.rule-page :deep(.n-input),
+.rule-page :deep(.n-input-wrapper),
+.rule-page :deep(.n-form-item),
+.rule-page :deep(textarea) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 @media (max-width: 960px) {
   .rule-page__hero,
-  .rule-page__toolbar,
   .rule-test,
   .rule-apply {
-    flex-direction: column;
     grid-template-columns: 1fr;
     align-items: stretch;
   }
@@ -1349,12 +1632,74 @@ onMounted(() => {
     min-width: 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .rule-page__hero-aside {
+    justify-content: stretch;
+  }
+
+  .rule-page__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 @media (max-width: 720px) {
-  .rule-page__stats,
+  .rule-page__hero,
+  .rule-page__toolbar {
+    padding: 14px;
+  }
+
+  .rule-page {
+    gap: 16px;
+  }
+
+  .rule-page__title {
+    font-size: clamp(24px, 7vw, 30px);
+    line-height: 1.2;
+  }
+
+  .rule-page__description {
+    max-width: none;
+  }
+
+  .rule-page__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
   .rule-test__summary,
   .rule-apply__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-page__hero-aside {
+    justify-content: stretch;
+  }
+
+  .rule-page__stat,
+  .rule-test__form,
+  .rule-test__result,
+  .rule-apply__form,
+  .rule-apply__result,
+  .rule-mobile-card,
+  .rule-mobile-result-card {
+    padding: 14px;
+  }
+
+  .rule-page__stat {
+    padding: 12px 10px;
+  }
+
+  .rule-page__stat span {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .rule-page__stat strong {
+    font-size: 18px;
+  }
+
+  .rule-mobile-card__actions {
     grid-template-columns: 1fr;
   }
 
@@ -1364,6 +1709,10 @@ onMounted(() => {
   .rule-apply__actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .rule-page__card-subtitle {
+    display: none;
   }
 }
 </style>

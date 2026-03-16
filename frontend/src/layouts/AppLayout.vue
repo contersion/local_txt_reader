@@ -25,10 +25,16 @@
           >
             目录规则
           </n-button>
+          <n-button secondary @click="backendModalVisible = true">
+            切换后端
+          </n-button>
         </n-space>
 
         <div class="app-layout__user">
-          <span class="app-layout__username">{{ authStore.user?.username }}</span>
+          <div class="app-layout__user-meta">
+            <span class="app-layout__username">{{ authStore.user?.username }}</span>
+            <span class="app-layout__backend">{{ backendSummary }}</span>
+          </div>
           <n-button tertiary @click="handleLogout">退出登录</n-button>
         </div>
       </div>
@@ -37,20 +43,26 @@
     <n-layout-content class="app-layout__content" :class="{ 'app-layout__content--immersive': isImmersiveRoute }">
       <router-view />
     </n-layout-content>
+
+    <backend-switch-modal v-model:show="backendModalVisible" />
   </n-layout>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { NButton, NLayout, NLayoutContent, NLayoutHeader, NSpace } from "naive-ui";
 import { useRoute, useRouter } from "vue-router";
 
+import BackendSwitchModal from "../components/BackendSwitchModal.vue";
 import { useAuthStore } from "../stores/auth";
+import { getBackendDisplaySummary } from "../utils/backend";
 
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+const backendModalVisible = ref(false);
 const isImmersiveRoute = computed(() => route.meta.immersive === true);
+const backendSummary = computed(() => getBackendDisplaySummary());
 
 function goTo(name: "books" | "rules") {
   void router.push({ name });
@@ -126,6 +138,11 @@ function handleLogout() {
   gap: 12px;
 }
 
+.app-layout__user-meta {
+  display: grid;
+  gap: 2px;
+}
+
 .app-layout__content {
   padding: 24px;
 }
@@ -139,6 +156,15 @@ function handleLogout() {
   overflow: hidden;
   color: var(--text-secondary);
   font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-layout__backend {
+  max-width: min(280px, 44vw);
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -166,7 +192,8 @@ function handleLogout() {
     justify-content: space-between;
   }
 
-  .app-layout__username {
+  .app-layout__username,
+  .app-layout__backend {
     max-width: 100%;
   }
 }

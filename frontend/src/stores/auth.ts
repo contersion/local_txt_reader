@@ -1,11 +1,13 @@
-﻿import { defineStore } from "pinia";
+import { defineStore } from "pinia";
 
 import { authApi } from "../api/auth";
 import { ApiError, getErrorMessage } from "../api/client";
 import type { LoginPayload, User } from "../types/api";
+import { getActiveBackendId } from "../utils/backend";
 import { authTokenStorage } from "../utils/token";
 
 interface AuthState {
+  backendId: string;
   token: string | null;
   user: User | null;
   initialized: boolean;
@@ -15,23 +17,50 @@ interface AuthState {
   bootstrapPromise: Promise<void> | null;
 }
 
-export const useAuthStore = defineStore("auth", {
-  state: (): AuthState => ({
-    token: authTokenStorage.get(),
+function createAuthState(): AuthState {
+  const backendId = getActiveBackendId();
+
+  return {
+    backendId,
+    token: authTokenStorage.get(backendId),
     user: null,
     initialized: false,
     restorePending: false,
     loginPending: false,
     errorMessage: null,
     bootstrapPromise: null,
-  }),
+  };
+}
+
+export const useAuthStore = defineStore("auth", {
+  state: (): AuthState => createAuthState(),
   getters: {
     hasToken: (state) => Boolean(state.token),
     isAuthenticated: (state) => Boolean(state.token && state.user),
     isRestoringSession: (state) => state.restorePending,
   },
   actions: {
+    syncBackendContext(options: { useStoredToken?: boolean } = {}) {
+      const activeBackendId = getActiveBackendId();
+
+      if (this.backendId === activeBackendId) {
+        return false;
+      }
+
+      this.backendId = activeBackendId;
+      this.token = options.useStoredToken === false ? null : authTokenStorage.get(activeBackendId);
+      this.user = null;
+      this.initialized = false;
+      this.restorePending = false;
+      this.loginPending = false;
+      this.errorMessage = null;
+      this.bootstrapPromise = null;
+
+      return true;
+    },
     async ensureReady() {
+      this.syncBackendContext();
+
       if (this.initialized) {
         return;
       }
@@ -45,6 +74,8 @@ export const useAuthStore = defineStore("auth", {
       await this.bootstrapPromise;
     },
     async bootstrap() {
+      this.syncBackendContext();
+
       if (!this.token) {
         this.initialized = true;
         this.restorePending = false;
@@ -58,7 +89,7 @@ export const useAuthStore = defineStore("auth", {
         this.errorMessage = null;
       } catch (error) {
         const message = error instanceof ApiError && error.status === 401
-          ? "登录状态已失效，请重新登录。"
+          ? "Your session has expired. Please log in again."
           : getErrorMessage(error);
 
         this.clearAuth();
@@ -69,6 +100,7 @@ export const useAuthStore = defineStore("auth", {
       }
     },
     async login(payload: LoginPayload) {
+      this.syncBackendContext({ useStoredToken: false });
       this.loginPending = true;
       this.errorMessage = null;
 
@@ -92,17 +124,35 @@ export const useAuthStore = defineStore("auth", {
       this.loginPending = false;
       this.errorMessage = null;
     },
+    handleBackendSwitch(nextBackendId = getActiveBackendId()) {
+      this.backendId = nextBackendId;
+      this.token = null;
+      this.user = null;
+      this.initialized = false;
+      this.restorePending = false;
+      this.loginPending = false;
+      this.errorMessage = null;
+      this.bootstrapPromise = null;
+    },
     setError(message: string | null) {
       this.errorMessage = message;
     },
     setToken(token: string) {
+      const activeBackendId = getActiveBackendId();
+
+      this.backendId = activeBackendId;
       this.token = token;
-      authTokenStorage.set(token);
+      authTokenStorage.set(token, activeBackendId);
     },
-    clearAuth() {
+    clearAuth(options: { clearStorage?: boolean } = {}) {
+      const backendId = this.backendId || getActiveBackendId();
+
       this.token = null;
       this.user = null;
-      authTokenStorage.clear();
+
+      if (options.clearStorage !== false) {
+        authTokenStorage.clear(backendId);
+      }
     },
   },
 });

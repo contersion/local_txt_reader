@@ -19,12 +19,34 @@
   --app-shell-color: #efe4d4;
   --surface-color: #fffaf2;
   --surface-shadow: 0 18px 48px rgba(82, 55, 28, 0.12);
+  --surface-raised: color-mix(in srgb, var(--surface-color) 94%, white 6%);
+  --surface-soft: color-mix(in srgb, var(--surface-color) 82%, white 18%);
   --primary-color: #b85d36;
   --primary-soft: rgba(184, 93, 54, 0.12);
   --accent-color: #346b61;
   --text-primary: #2e241d;
   --text-secondary: #6d5a4a;
   --border-color: rgba(109, 90, 74, 0.14);
+  --border-color-soft: rgba(109, 90, 74, 0.1);
+  --shadow-soft: 0 12px 30px rgba(82, 55, 28, 0.08);
+  --shadow-card: 0 16px 36px rgba(82, 55, 28, 0.1);
+  --shadow-modal: 0 24px 60px rgba(82, 55, 28, 0.16);
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --control-height-sm: 36px;
+  --control-height-md: 40px;
+  --control-height-lg: 46px;
+  --text-title-1: clamp(30px, 4vw, 44px);
+  --text-title-2: clamp(24px, 3vw, 34px);
+  --text-body: 16px;
+  --text-caption: 13px;
 }
 
 * {
