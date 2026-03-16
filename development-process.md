@@ -1,3 +1,17 @@
+# AI Task Template
+
+When implementing a new feature:
+
+1. Read AGENTS.md
+2. Read development-process.md
+3. Scan project structure
+4. Locate related files
+5. Produce modification plan
+6. Implement changes
+7. Validate compatibility
+
+
+
 # TXT Reader 开发实施流程
 
 > 本文档用于指导 AI / 开发代理按阶段完成 TXT Reader 项目开发。  
