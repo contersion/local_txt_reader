@@ -41,12 +41,28 @@
         </div>
       </section>
 
+      <div
+        v-if="isMobileViewport"
+        class="reader-mobile-actions"
+        :class="{ 'reader-mobile-actions--visible': mobileActionLayerVisible }"
+        @click.stop
+      >
+        <n-button tertiary @click="goBack">返回详情</n-button>
+        <n-button secondary @click="openDrawer('catalog')">目录</n-button>
+        <n-button secondary @click="openDrawer('settings')">设置</n-button>
+      </div>
+
       <section class="reader-paper">
         <n-alert v-if="chapterError" type="error" :show-icon="false" class="reader-paper__alert">
           {{ chapterError }}
         </n-alert>
 
-        <article ref="contentRef" class="reader-content" :class="{ 'reader-content--loading': chapterLoading }">
+        <article
+          ref="contentRef"
+          class="reader-content"
+          :class="{ 'reader-content--loading': chapterLoading }"
+          @click="handleReaderContentTap"
+        >
           <template v-if="currentChapter">
             <p
               v-for="(paragraph, index) in currentChapterParagraphs"
@@ -160,6 +176,7 @@ import { formatPercent } from "../utils/format";
 
 const PROGRESS_THROTTLE_MS = 15000;
 const COMPACT_BREAKPOINT = 980;
+const MOBILE_BREAKPOINT = 820;
 
 type ProgressSnapshot = ReadingProgressPayload;
 type ReaderDrawerView = "catalog" | "settings";
@@ -183,15 +200,19 @@ const syncState = ref<"idle" | "pending" | "syncing" | "error">("idle");
 const activeDrawer = ref<ReaderDrawerView | null>(null);
 const viewportWidth = ref(COMPACT_BREAKPOINT + 200);
 const contentRef = ref<HTMLElement | null>(null);
+const mobileActionLayerVisible = ref(false);
 const preferences = reactive({ ...preferencesStore.reader });
 
 let progressSaveTimer: ReturnType<typeof setTimeout> | null = null;
 let lastSavedProgressKey = "";
 
 const currentChapterTitle = computed(() => currentChapter.value?.chapter_title || chapters.value[currentChapterIndex.value]?.chapter_title || "正在载入章节");
-const currentChapterParagraphs = computed(() => {
+const currentChapterDisplayContent = computed(() => {
   const content = currentChapter.value?.content || "";
-  return content.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+  return stripLeadingChapterTitleLine(content, currentChapterTitle.value);
+});
+const currentChapterParagraphs = computed(() => {
+  return currentChapterDisplayContent.value.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
 });
 const currentChapterPositionLabel = computed(() => chapters.value.length === 0 ? "暂无目录" : `第 ${currentChapterIndex.value + 1} / ${chapters.value.length} 章`);
 const currentProgressPercent = computed(() => sessionProgress.value?.percent ?? progress.value?.percent ?? 0);
@@ -199,6 +220,7 @@ const progressPercentLabel = computed(() => formatPercent(currentProgressPercent
 const syncedProgressLabel = computed(() => `${syncState.value === "error" ? "同步待重试" : "当前进度"} · ${progressPercentLabel.value}`);
 const canGoPrev = computed(() => currentChapterIndex.value > 0);
 const canGoNext = computed(() => currentChapterIndex.value < chapters.value.length - 1);
+const isMobileViewport = computed(() => viewportWidth.value <= MOBILE_BREAKPOINT);
 const drawerTitle = computed(() => activeDrawer.value === "settings" ? "阅读设置" : "章节目录");
 const drawerWidth = computed(() => Math.min(Math.max(viewportWidth.value - 24, 280), 380));
 const isDrawerOpen = computed({
@@ -249,6 +271,12 @@ watch(
   },
 );
 
+watch(isMobileViewport, (value) => {
+  if (!value) {
+    mobileActionLayerVisible.value = false;
+  }
+});
+
 onMounted(() => {
   if (typeof window === "undefined") {
     return;
@@ -282,10 +310,49 @@ function formatChapterOrdinal(index: number) {
 
 function openDrawer(drawer: ReaderDrawerView) {
   activeDrawer.value = drawer;
+  mobileActionLayerVisible.value = false;
 }
 
 function handleWindowResize() {
   viewportWidth.value = window.innerWidth;
+}
+
+function handleReaderContentTap() {
+  if (!isMobileViewport.value) {
+    return;
+  }
+
+  mobileActionLayerVisible.value = !mobileActionLayerVisible.value;
+}
+
+function stripLeadingChapterTitleLine(content: string, chapterTitle: string) {
+  if (!content) {
+    return "";
+  }
+
+  const normalizedContent = content.replace(/\r\n?/g, "\n");
+  const normalizedChapterTitle = chapterTitle.trim();
+  if (!normalizedChapterTitle) {
+    return normalizedContent;
+  }
+
+  const lines = normalizedContent.split("\n");
+  let firstNonEmptyLineIndex = 0;
+
+  while (firstNonEmptyLineIndex < lines.length && lines[firstNonEmptyLineIndex].trim() === "") {
+    firstNonEmptyLineIndex += 1;
+  }
+
+  if (firstNonEmptyLineIndex >= lines.length) {
+    return normalizedContent;
+  }
+
+  if (lines[firstNonEmptyLineIndex].trim() !== normalizedChapterTitle) {
+    return normalizedContent;
+  }
+
+  lines.splice(firstNonEmptyLineIndex, 1);
+  return lines.join("\n");
 }
 
 function buildProgressSnapshot(contentLength: number, chapterIndex = currentChapterIndex.value, charOffset = 0): ProgressSnapshot {
@@ -323,6 +390,7 @@ async function loadReader() {
   pageError.value = null;
   chapterError.value = null;
   activeDrawer.value = null;
+  mobileActionLayerVisible.value = false;
   sessionProgress.value = null;
   clearScheduledProgressSync();
 
@@ -455,6 +523,7 @@ function handlePageHide() {
 
 function handleChapterSelect(chapterIndex: number) {
   activeDrawer.value = null;
+  mobileActionLayerVisible.value = false;
   void openChapter(chapterIndex, { syncRoute: true, restoreCharOffset: 0, saveAfterOpen: true });
 }
 
@@ -515,6 +584,40 @@ function goBack() {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.reader-mobile-actions {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 16px;
+  right: 16px;
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color-soft) 82%, white 18%);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-raised) 86%, white 14%);
+  box-shadow: 0 14px 36px rgba(37, 28, 20, 0.12);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.reader-mobile-actions--visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.reader-mobile-actions :deep(.n-button) {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 16px;
 }
 
 .reader-paper {
@@ -609,6 +712,15 @@ function goBack() {
 
   .reader-header {
     flex-direction: column;
+  }
+
+  .reader-header__actions {
+    display: none;
+  }
+
+  .reader-paper {
+    padding: 22px 18px 24px;
+    border-radius: 24px;
   }
 
   .reader-footer__actions {

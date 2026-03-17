@@ -10,9 +10,9 @@
       </div>
 
       <div class="app-layout__actions">
-        <n-space size="small" wrap>
+        <n-space size="small" wrap class="app-layout__nav">
           <n-button
-            :type="route.name === 'books' ? 'primary' : 'default'"
+            :type="isBooksSection ? 'primary' : 'default'"
             secondary
             @click="goTo('books')"
           >
@@ -24,6 +24,14 @@
             @click="goTo('rules')"
           >
             目录规则
+          </n-button>
+          <n-button
+            v-if="showSourceManagerButton"
+            :type="sourceManagerVisible ? 'primary' : 'default'"
+            secondary
+            @click="sourceManagerVisible = true"
+          >
+            书源管理
           </n-button>
           <n-button secondary @click="backendModalVisible = true">
             切换后端
@@ -45,6 +53,7 @@
     </n-layout-content>
 
     <backend-switch-modal v-model:show="backendModalVisible" />
+    <online-source-manager-modal v-model:show="sourceManagerVisible" />
   </n-layout>
 </template>
 
@@ -54,6 +63,7 @@ import { NButton, NLayout, NLayoutContent, NLayoutHeader, NSpace } from "naive-u
 import { useRoute, useRouter } from "vue-router";
 
 import BackendSwitchModal from "../components/BackendSwitchModal.vue";
+import OnlineSourceManagerModal from "../components/OnlineSourceManagerModal.vue";
 import { useAuthStore } from "../stores/auth";
 import { getBackendDisplaySummary } from "../utils/backend";
 
@@ -61,8 +71,12 @@ const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const backendModalVisible = ref(false);
+const sourceManagerVisible = ref(false);
 const isImmersiveRoute = computed(() => route.meta.immersive === true);
 const backendSummary = computed(() => getBackendDisplaySummary());
+// Keep list and detail under the same top-level books navigation section.
+const isBooksSection = computed(() => route.name === "books" || route.name === "book-detail");
+const showSourceManagerButton = computed(() => isBooksSection.value);
 
 function goTo(name: "books" | "rules") {
   void router.push({ name });
@@ -132,6 +146,10 @@ function handleLogout() {
   gap: 18px;
 }
 
+.app-layout__nav {
+  flex-wrap: wrap;
+}
+
 .app-layout__user {
   display: flex;
   align-items: center;
@@ -178,6 +196,20 @@ function handleLogout() {
   .app-layout__actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .app-layout__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .app-layout__nav :deep(.n-space-item) {
+    min-width: 0;
+  }
+
+  .app-layout__nav :deep(.n-button) {
+    width: 100%;
   }
 
   .app-layout__content {

@@ -1,3 +1,34 @@
+## v1.06
+
+Date
+`2026-03-18`
+
+Summary
+本次版本只做一项最小前端导航语义修正，不改页面结构、不改路由定义：
+- 将 `/books` 与 `/books/:libraryBookId` 统一归类为同一个“书籍区域”。
+- 修复进入书籍详情页后，顶部“书架”高亮丢失的问题。
+- 修复“书源管理”按钮只在书架列表页显示、进入详情页后消失的问题。
+
+Frontend
+- 调整 `AppLayout.vue` 顶部导航归类逻辑：
+  - 新增 books section 计算状态，显式覆盖 `books` 与 `book-detail` 两个路由名。
+  - “书架”按钮高亮不再只依赖 `route.name === "books"`。
+  - “书源管理”按钮显示条件同步扩展到书籍详情页。
+- 未改动：
+  - `BookshelfPage.vue`
+  - `BookDetailPage.vue`
+  - 路由结构
+  - 接口与业务逻辑
+
+Verification
+- 已完成布局层专项静态校验：
+  - books section 归类覆盖 `books` 与 `book-detail`
+  - “书架”高亮逻辑改为 section 级判断
+  - “书源管理”按钮显示逻辑改为 section 级判断
+- 前端静态验证：
+  - `npm run typecheck`
+  - `npm run build`
+
 ## v1.05
 
 Date

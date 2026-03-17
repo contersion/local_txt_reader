@@ -255,6 +255,56 @@ export interface OnlineBookChapterContent {
   source_url: string | null;
 }
 
+export type OnlineSourceValidationStatus = "unchecked" | "valid" | "invalid";
+
+export interface OnlineSourceSummary {
+  id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  enabled: boolean;
+  base_url: string;
+  validation_status: OnlineSourceValidationStatus;
+  validation_errors: string[];
+  last_checked_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LegadoIssueSeverity = "error" | "warning";
+export type LegadoIssueStage = "source" | "search" | "detail" | "catalog" | "content" | null;
+
+export interface LegadoImportIssue {
+  code: string;
+  error_code: string;
+  message: string;
+  field?: string | null;
+  severity: LegadoIssueSeverity;
+  source_path?: string | null;
+  stage?: LegadoIssueStage;
+  field_name?: string | null;
+  raw_value?: unknown | null;
+  normalized_value?: unknown | null;
+}
+
+export interface LegadoMappedSource {
+  name: string;
+  description: string | null;
+  enabled: boolean;
+  base_url: string;
+  definition: unknown;
+}
+
+export interface LegadoImportResult {
+  is_valid: boolean;
+  mapped_source: LegadoMappedSource | null;
+  source_id: number | null;
+  errors: LegadoImportIssue[];
+  warnings: LegadoImportIssue[];
+  ignored_fields: string[];
+  unsupported_fields: string[];
+}
+
 export interface ReadingProgress {
   id: number;
   user_id: number;
