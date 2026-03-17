@@ -807,7 +807,7 @@ function goBack() {
 
   .reader-side-card {
     position: sticky;
-    top: 24px;
+    top: 50dvh;
     display: grid;
     gap: 18px;
     padding: 20px;
@@ -815,6 +815,10 @@ function goBack() {
     border-radius: 26px;
     background: color-mix(in srgb, var(--surface-raised) 90%, white 10%);
     box-shadow: var(--shadow-soft);
+    max-height: calc(100dvh - 48px);
+    overflow: auto;
+    scrollbar-gutter: stable both-edges;
+    transform: translateY(-50%);
   }
 
   .reader-side-card__group {
@@ -860,6 +864,13 @@ function goBack() {
 
   .reader-footer {
     display: none;
+  }
+}
+
+@media (min-width: 1180px) and (max-height: 920px) {
+  .reader-side-card {
+    top: 24px;
+    transform: none;
   }
 }
 
