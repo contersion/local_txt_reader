@@ -29,4 +29,9 @@ class BookGroup(Base):
         back_populates="groups",
         order_by="Book.title",
     )
+    online_books: Mapped[list["OnlineShelfBook"]] = relationship(
+        secondary="online_book_group_memberships",
+        back_populates="groups",
+        order_by="OnlineShelfBook.title",
+    )
 

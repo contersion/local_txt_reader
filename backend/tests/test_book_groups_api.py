@@ -128,3 +128,68 @@ def test_delete_group_prevents_books_from_losing_all_groups(monkeypatch, tmp_pat
     assert final_groups_response.status_code == 200
     assert [group["name"] for group in final_groups_response.json()] == ["\u9ed8\u8ba4\u5206\u7ec4"]
 
+
+def test_delete_group_prevents_online_books_from_losing_all_groups(monkeypatch, tmp_path):
+    from tests.test_online_books_api import create_source, create_added_online_book, stub_httpx_request, build_response
+    import json
+
+    with authenticated_client(monkeypatch, tmp_path) as client:
+        source = create_source(client)
+        detail_url = "https://example.com/books/1"
+        catalog_url = "https://example.com/books/1/catalog"
+        stub_httpx_request(
+            monkeypatch,
+            {
+                detail_url: build_response(
+                    "GET",
+                    detail_url,
+                    headers={"content-type": "application/json"},
+                    content=json.dumps(
+                        {
+                            "book": {
+                                "title": "三体",
+                                "author": "刘慈欣",
+                                "description": "科幻史诗",
+                                "cover": "https://example.com/covers/1.jpg",
+                                "catalog_url": catalog_url,
+                            }
+                        }
+                    ),
+                ),
+                catalog_url: build_response(
+                    "GET",
+                    catalog_url,
+                    headers={"content-type": "text/html; charset=utf-8"},
+                    content="""
+                    <html><body>
+                      <ul>
+                        <li class="chapter-item"><a href="/books/1/ch1">第一章 开始</a></li>
+                      </ul>
+                    </body></html>
+                    """,
+                ),
+            },
+        )
+        online_book = create_added_online_book(client, source["id"])
+        groups_response = client.get("/api/book-groups")
+        default_group = get_default_group(groups_response.json())
+
+        blocked_delete_response = client.delete(f"/api/book-groups/{default_group['id']}")
+
+        extra_group_response = client.post("/api/book-groups", json={"name": "在线备份"})
+        assert extra_group_response.status_code == 201
+        extra_group_id = extra_group_response.json()["id"]
+        assign_response = client.put(
+            f"/api/online-books/{online_book['id']}/groups",
+            json={"group_ids": [default_group["id"], extra_group_id]},
+        )
+        delete_extra_response = client.delete(f"/api/book-groups/{extra_group_id}")
+        final_groups_response = client.get(f"/api/online-books/{online_book['id']}/groups")
+
+    assert blocked_delete_response.status_code == 409
+    assert blocked_delete_response.json()["detail"] == "Deleting this group would leave some books without any group"
+    assert assign_response.status_code == 200
+    assert delete_extra_response.status_code == 204
+    assert final_groups_response.status_code == 200
+    assert [group["name"] for group in final_groups_response.json()] == ["默认分组"]
+

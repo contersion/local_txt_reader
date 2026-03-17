@@ -90,6 +90,73 @@ export interface BookGroupAssignmentPayload {
 }
 
 export type BookSortKey = "created_at" | "recent_read" | "title";
+export type LibrarySourceKind = "local" | "online";
+
+export interface LibraryBookSourceMeta {
+  source_id: number | null;
+  remote_book_id: string | null;
+  detail_url: string | null;
+}
+
+export interface LocalFileMeta {
+  file_name: string;
+  file_path: string;
+  encoding: string;
+}
+
+export interface OnlineBookMeta {
+  source_id: number;
+  source_name: string;
+  detail_url: string;
+  remote_book_id: string | null;
+  latest_catalog_fetched_at: string | null;
+}
+
+export interface LibraryBookSummary {
+  library_id: string;
+  source_kind: LibrarySourceKind;
+  source_label: string;
+  entity_id: number;
+  title: string;
+  author: string | null;
+  cover_url: string | null;
+  total_chapters: number | null;
+  total_words: number | null;
+  progress_percent: number | null;
+  recent_read_at: string | null;
+  created_at: string;
+  updated_at: string;
+  groups: BookGroupSummary[];
+  source_meta?: LibraryBookSourceMeta | null;
+}
+
+export interface LibraryBookDetail {
+  source_kind: LibrarySourceKind;
+  entity_id: number;
+  library_book_id: string;
+  source_label: string;
+  title: string;
+  author: string | null;
+  description: string | null;
+  cover_url: string | null;
+  total_chapters: number | null;
+  total_words: number | null;
+  recent_read_at: string | null;
+  progress_percent: number | null;
+  created_at: string;
+  updated_at: string;
+  groups: BookGroupSummary[];
+  chapter_rule: ChapterRule | null;
+  local_file: LocalFileMeta | null;
+  online_meta: OnlineBookMeta | null;
+}
+
+export interface LibraryBooksQuery {
+  q?: string;
+  sort_by?: "created_at" | "recent_read_at" | "title";
+  sort_order?: "asc" | "desc";
+  source_kind?: LibrarySourceKind;
+}
 
 export interface BookShelfItem {
   id: number;
@@ -150,6 +217,42 @@ export interface BookChapterContent {
   start_offset: number;
   end_offset: number;
   content: string;
+}
+
+export interface OnlineBookDetail {
+  id: number;
+  user_id: number;
+  source_id: number;
+  source_name: string;
+  title: string;
+  author: string | null;
+  cover_url: string | null;
+  description: string | null;
+  remote_book_id: string | null;
+  detail_url: string;
+  total_chapters: number | null;
+  latest_catalog_fetched_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnlineBookCatalogEntry {
+  id: number;
+  online_book_id: number;
+  chapter_index: number;
+  chapter_title: string;
+  chapter_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnlineBookChapterContent {
+  online_book_id: number;
+  chapter_index: number;
+  chapter_title: string;
+  content: string;
+  content_length: number;
+  source_url: string | null;
 }
 
 export interface ReadingProgress {

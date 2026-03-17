@@ -39,7 +39,7 @@
                 {{ formatChapterOrdinal(chapter.chapter_index) }}
               </span>
               <strong class="chapter-catalog-list__title">{{ chapter.chapter_title }}</strong>
-              <span class="chapter-catalog-list__meta">
+              <span v-if="hasOffsets(chapter)" class="chapter-catalog-list__meta">
                 范围 {{ formatNumber(chapter.start_offset) }} - {{ formatNumber(chapter.end_offset) }}
               </span>
             </button>
@@ -92,7 +92,7 @@
               {{ formatChapterOrdinal(chapter.chapter_index) }}
             </span>
             <strong class="chapter-catalog-list__title">{{ chapter.chapter_title }}</strong>
-            <span class="chapter-catalog-list__meta">
+            <span v-if="hasOffsets(chapter)" class="chapter-catalog-list__meta">
               范围 {{ formatNumber(chapter.start_offset) }} - {{ formatNumber(chapter.end_offset) }}
             </span>
           </button>
@@ -106,7 +106,7 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { NDrawer, NDrawerContent, NEmpty, NModal } from "naive-ui";
 
-import type { BookChapter } from "../types/api";
+import type { BookChapter, OnlineBookCatalogEntry } from "../types/api";
 import { formatNumber } from "../utils/format";
 
 const MOBILE_BREAKPOINT = 720;
@@ -115,7 +115,7 @@ const props = defineProps<{
   show: boolean;
   bookTitle: string;
   chapterCount: number;
-  chapters: BookChapter[];
+  chapters: Array<BookChapter | OnlineBookCatalogEntry>;
 }>();
 
 const emit = defineEmits<{
@@ -171,6 +171,10 @@ function handleChapterSelect(chapterIndex: number) {
 
 function formatChapterOrdinal(index: number) {
   return `第 ${formatNumber(index + 1)} 章`;
+}
+
+function hasOffsets(chapter: BookChapter | OnlineBookCatalogEntry) {
+  return "start_offset" in chapter && "end_offset" in chapter;
 }
 </script>
 

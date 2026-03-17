@@ -63,7 +63,7 @@
                 v-model:value="searchKeyword"
                 clearable
                 size="medium"
-                placeholder="搜索书名"
+                placeholder="搜索书名或作者"
                 @keydown.enter.prevent="handleSearch"
                 @clear="handleClearSearch"
               />
@@ -102,9 +102,9 @@
     <section v-else class="bookshelf-list" aria-label="书籍列表">
       <article
         v-for="book in displayedBooks"
-        :key="book.id"
+        :key="book.library_id"
         class="bookshelf-item"
-        @click="goToDetail(book.id)"
+        @click="handleCardClick(book)"
       >
         <div class="bookshelf-item__cover" :class="{ 'bookshelf-item__cover--filled': !!book.cover_url }" aria-hidden="true">
           <img
@@ -130,21 +130,29 @@
 
             <div class="bookshelf-item__status-row">
               <span>{{ formatReadingLabel(book) }}</span>
-              <span>{{ formatRecentLabel(book.recent_read_at ?? book.last_read_at) }}</span>
+              <span>{{ formatRecentLabel(book.recent_read_at) }}</span>
             </div>
           </div>
 
           <div class="bookshelf-item__facts">
             <span>{{ book.author || "作者未填写" }}</span>
-            <span>共 {{ formatNumber(book.total_chapters) }} 章</span>
-            <span>{{ formatWordCount(book.total_words) }}</span>
+            <span>{{ formatChapterCount(book.total_chapters) }}</span>
+            <span>{{ formatWordCountLabel(book.total_words) }}</span>
             <span>收录于 {{ formatDate(book.created_at) }}</span>
           </div>
 
           <div class="bookshelf-item__groups">
             <n-tag
+              size="small"
+              round
+              :bordered="false"
+              :type="sourceTagType(book)"
+            >
+              {{ book.source_label }}
+            </n-tag>
+            <n-tag
               v-for="group in book.groups"
-              :key="`${book.id}-${group.id}`"
+              :key="`${book.library_id}-${group.id}`"
               size="small"
               round
               :bordered="false"
@@ -175,25 +183,25 @@
                 text
                 type="primary"
                 class="bookshelf-item__action bookshelf-item__action--primary"
-                :loading="continuingBookId === book.id"
+                :loading="continuingBookId === book.library_id"
                 @click.stop="handleContinue(book)"
               >
                 {{ continueLabel(book) }}
               </n-button>
-              <n-button quaternary size="small" class="bookshelf-item__action" @click.stop="goToDetail(book.id)">
-                详情
+              <n-button quaternary size="small" class="bookshelf-item__action" @click.stop="goToDetail(book)">
+                {{ detailLabel(book) }}
               </n-button>
               <n-button quaternary size="small" class="bookshelf-item__action" @click.stop="openBookGroupSelector(book)">
-                管理分组
+                {{ groupActionLabel(book) }}
               </n-button>
-              <n-popconfirm v-if="isEditMode" @positive-click="() => handleDelete(book)">
+              <n-popconfirm v-if="isEditMode && isLocalBook(book)" @positive-click="() => handleDelete(book)">
                 <template #trigger>
                   <n-button
                     quaternary
                     size="small"
                     type="error"
                     class="bookshelf-item__action"
-                    :loading="deletingBookId === book.id"
+                    :loading="deletingBookId === book.library_id"
                     @click.stop
                   >
                     删除
@@ -201,6 +209,15 @@
                 </template>
                 删除后将同时移除本地书籍文件，确认继续吗？
               </n-popconfirm>
+              <n-button
+                v-else-if="isEditMode"
+                quaternary
+                size="small"
+                class="bookshelf-item__action"
+                @click.stop="notifyOnlineFeatureUnavailable('在线书移除入口下一阶段开放')"
+              >
+                删除待开放
+              </n-button>
             </div>
           </div>
         </div>
@@ -248,11 +265,14 @@ import { useRouter } from "vue-router";
 
 import { bookGroupsApi } from "../api/book-groups";
 import { booksApi } from "../api/books";
+import { libraryApi } from "../api/library";
+import { onlineBooksApi } from "../api/online-books";
 import { resolveApiAssetUrl, ApiError, getErrorMessage } from "../api/client";
 import BookGroupManagerModal from "../components/BookGroupManagerModal.vue";
 import BookGroupSelectorModal from "../components/BookGroupSelectorModal.vue";
-import type { BookGroup, BookShelfItem, BookSortKey } from "../types/api";
+import type { BookGroup, BookSortKey, LibraryBookSummary } from "../types/api";
 import { usePreferencesStore } from "../stores/preferences";
+import { buildLibraryBookId } from "../utils/library-id";
 import { clampPercentage, formatDateTime, formatNumber, formatPercent, formatWordCount } from "../utils/format";
 
 const router = useRouter();
@@ -260,7 +280,7 @@ const message = useMessage();
 const preferencesStore = usePreferencesStore();
 const BOOK_METADATA_UPDATED_EVENT = "books:metadata-updated";
 const uploadRef = ref<UploadInst | null>(null);
-const books = ref<BookShelfItem[]>([]);
+const libraryBooks = ref<LibraryBookSummary[]>([]);
 const groups = ref<BookGroup[]>([]);
 const searchKeyword = ref(preferencesStore.bookshelf.search);
 const appliedSearch = ref(preferencesStore.bookshelf.search);
@@ -268,14 +288,14 @@ const loading = ref(false);
 const uploading = ref(false);
 const errorMessage = ref<string | null>(null);
 const groupWarningMessage = ref<string | null>(null);
-const deletingBookId = ref<number | null>(null);
-const continuingBookId = ref<number | null>(null);
+const deletingBookId = ref<string | null>(null);
+const continuingBookId = ref<string | null>(null);
 const isEditMode = ref(false);
 const activeFilter = ref(getFilterKeyFromGroupId(preferencesStore.bookshelf.groupId));
 const sortKey = ref<BookSortKey>(preferencesStore.bookshelf.sort);
 const groupManagerVisible = ref(false);
 const groupSelectorVisible = ref(false);
-const managingBook = ref<BookShelfItem | null>(null);
+const managingBook = ref<LibraryBookSummary | null>(null);
 const selectedGroupIds = ref<number[]>([]);
 const groupMutationPending = ref(false);
 const bookGroupsSubmitting = ref(false);
@@ -293,7 +313,16 @@ const filterOptions = computed(() => {
   ];
 });
 
-const displayedBooks = computed(() => books.value);
+const displayedBooks = computed(() => {
+  const activeGroupId = getActiveGroupId(activeFilter.value);
+  if (activeGroupId === null) {
+    return libraryBooks.value;
+  }
+
+  return libraryBooks.value.filter((book) => {
+    return book.groups.some((group) => group.id === activeGroupId);
+  });
+});
 
 const emptyDescription = computed(() => {
   if (appliedSearch.value.trim()) {
@@ -327,7 +356,6 @@ watch(activeFilter, () => {
     groupId: getActiveGroupId(activeFilter.value),
     page: 1,
   });
-  void loadBooks(appliedSearch.value);
 });
 
 watch(sortKey, () => {
@@ -335,7 +363,7 @@ watch(sortKey, () => {
     sort: sortKey.value,
     page: 1,
   });
-  void loadBooks(appliedSearch.value);
+  void loadLibraryBooks(appliedSearch.value);
 });
 
 function getFilterKeyFromGroupId(groupId: number | null) {
@@ -367,7 +395,11 @@ function formatRecentLabel(value: string | null) {
   return value ? `最近阅读 ${formatDateTime(value)}` : "最近阅读：未开始";
 }
 
-function formatReadingLabel(book: BookShelfItem) {
+function formatReadingLabel(book: LibraryBookSummary) {
+  if (book.source_kind === "online") {
+    return "在线书已加入书架";
+  }
+
   const progress = clampPercentage(book.progress_percent);
   return progress > 0 ? `已读 ${formatPercent(progress)}` : "尚未开始阅读";
 }
@@ -377,8 +409,30 @@ function getCoverLetter(title: string) {
   return normalized ? normalized.slice(0, 1).toUpperCase() : "T";
 }
 
-function continueLabel(book: BookShelfItem) {
+function continueLabel(book: LibraryBookSummary) {
+  if (book.source_kind === "online") {
+    return "阅读待开放";
+  }
   return clampPercentage(book.progress_percent) > 0 ? "继续阅读" : "开始阅读";
+}
+
+function detailLabel(book: LibraryBookSummary) {
+  return book.source_kind === "online" ? "详情待开放" : "详情";
+}
+
+function groupActionLabel(_book: LibraryBookSummary) {
+  return "管理分组";
+}
+function sourceTagType(book: LibraryBookSummary) {
+  return book.source_kind === "local" ? "success" : "info";
+}
+
+function formatChapterCount(value: number | null) {
+  return value === null ? "目录待同步" : `共 ${formatNumber(value)} 章`;
+}
+
+function formatWordCountLabel(value: number | null) {
+  return value === null ? "字数待定" : formatWordCount(value);
 }
 
 function resolveCover(coverUrl: string | null) {
@@ -389,18 +443,39 @@ function resetUploadControl() {
   uploadRef.value?.clear();
 }
 
-async function loadBooks(search = appliedSearch.value.trim()) {
+function isLocalBook(book: LibraryBookSummary) {
+  return book.source_kind === "local";
+}
+
+function getLocalBookId(book: LibraryBookSummary) {
+  if (!isLocalBook(book)) {
+    return null;
+  }
+
+  const [sourceKind, rawId] = book.library_id.split(":");
+  const parsedId = Number(rawId);
+  if (sourceKind === "local" && Number.isFinite(parsedId)) {
+    return parsedId;
+  }
+
+  return book.entity_id;
+}
+
+function notifyOnlineFeatureUnavailable(messageText: string) {
+  message.info(messageText);
+}
+
+async function loadLibraryBooks(search = appliedSearch.value.trim()) {
   loading.value = true;
   errorMessage.value = null;
 
   try {
-    books.value = await booksApi.list({
-      search: search || undefined,
-      groupId: getActiveGroupId(activeFilter.value),
+    libraryBooks.value = await libraryApi.list({
+      q: search || undefined,
       sort: sortKey.value,
     });
   } catch (error) {
-    books.value = [];
+    libraryBooks.value = [];
     errorMessage.value = getErrorMessage(error);
   } finally {
     loading.value = false;
@@ -419,7 +494,7 @@ async function loadGroups() {
 }
 
 async function loadPage() {
-  await Promise.all([loadBooks(appliedSearch.value), loadGroups()]);
+  await Promise.all([loadLibraryBooks(appliedSearch.value), loadGroups()]);
 }
 
 function handleSearch() {
@@ -430,7 +505,7 @@ function handleSearch() {
     search: normalizedSearch,
     page: 1,
   });
-  void loadBooks(normalizedSearch);
+  void loadLibraryBooks(normalizedSearch);
 }
 
 function handleClearSearch() {
@@ -440,7 +515,7 @@ function handleClearSearch() {
     search: "",
     page: 1,
   });
-  void loadBooks("");
+  void loadLibraryBooks("");
 }
 
 function handleRefresh() {
@@ -451,22 +526,67 @@ function toggleEditMode() {
   isEditMode.value = !isEditMode.value;
 }
 
-function goToDetail(bookId: number) {
+function goToDetail(book: LibraryBookSummary) {
   void router.push({
     name: "book-detail",
-    params: { bookId },
+    params: {
+      libraryBookId: buildLibraryBookId(book.source_kind, book.entity_id),
+    },
   });
 }
 
-async function handleContinue(book: BookShelfItem) {
-  continuingBookId.value = book.id;
+function handleCardClick(book: LibraryBookSummary) {
+  goToDetail(book);
+}
+
+function normalizeChapterIndex(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+
+  return Math.floor(value);
+}
+
+async function resolveOnlineContinueChapterIndex(onlineBookId: number) {
+  try {
+    const progress = await onlineBooksApi.getProgress(onlineBookId);
+    return normalizeChapterIndex(progress.chapter_index);
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) {
+      message.warning("在线阅读进度恢复失败，已从第 0 章打开。");
+    }
+    return 0;
+  }
+}
+
+async function handleContinue(book: LibraryBookSummary) {
+  const libraryBookId = buildLibraryBookId(book.source_kind, book.entity_id);
+  const localBookId = getLocalBookId(book);
+
+  continuingBookId.value = libraryBookId;
+
+  if (localBookId === null) {
+    try {
+      const chapterIndex = await resolveOnlineContinueChapterIndex(book.entity_id);
+      await router.push({
+        name: "reader",
+        params: {
+          libraryBookId,
+          chapterIndex,
+        },
+      });
+    } finally {
+      continuingBookId.value = null;
+    }
+    return;
+  }
 
   try {
-    const progress = await booksApi.getProgress(book.id);
+    const progress = await booksApi.getProgress(localBookId);
     await router.push({
       name: "reader",
       params: {
-        bookId: book.id,
+        libraryBookId,
         chapterIndex: progress.chapter_index,
       },
     });
@@ -474,7 +594,7 @@ async function handleContinue(book: BookShelfItem) {
     if (error instanceof ApiError && error.status === 404) {
       await router.push({
         name: "reader",
-        params: { bookId: book.id },
+        params: { libraryBookId },
       });
       return;
     }
@@ -485,13 +605,19 @@ async function handleContinue(book: BookShelfItem) {
   }
 }
 
-async function handleDelete(book: BookShelfItem) {
-  deletingBookId.value = book.id;
+async function handleDelete(book: LibraryBookSummary) {
+  const localBookId = getLocalBookId(book);
+  if (localBookId === null) {
+    notifyOnlineFeatureUnavailable("在线书移除入口下一阶段开放");
+    return;
+  }
+
+  deletingBookId.value = book.library_id;
 
   try {
-    await booksApi.delete(book.id);
+    await booksApi.delete(localBookId);
     message.success(`已删除《${book.title}》`);
-    await Promise.all([loadBooks(appliedSearch.value), loadGroups()]);
+    await Promise.all([loadLibraryBooks(appliedSearch.value), loadGroups()]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -546,7 +672,7 @@ async function handleRenameGroup(payload: { groupId: number; name: string }) {
   try {
     await bookGroupsApi.update(payload.groupId, { name: payload.name });
     message.success("分组已重命名");
-    await Promise.all([loadGroups(), loadBooks(appliedSearch.value)]);
+    await Promise.all([loadGroups(), loadLibraryBooks(appliedSearch.value)]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -560,7 +686,7 @@ async function handleDeleteGroup(groupId: number) {
   try {
     await bookGroupsApi.remove(groupId);
     message.success("分组已删除");
-    await Promise.all([loadGroups(), loadBooks(appliedSearch.value)]);
+    await Promise.all([loadGroups(), loadLibraryBooks(appliedSearch.value)]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -568,40 +694,46 @@ async function handleDeleteGroup(groupId: number) {
   }
 }
 
-async function openBookGroupSelector(book: BookShelfItem) {
+async function openBookGroupSelector(book: LibraryBookSummary) {
+  const localBookId = getLocalBookId(book);
   managingBook.value = book;
   selectedGroupIds.value = book.groups.map((group) => group.id);
   groupSelectorVisible.value = true;
 
   try {
-    const currentGroups = await booksApi.getGroups(book.id);
+    const currentGroups = localBookId === null
+      ? await onlineBooksApi.getGroups(book.entity_id)
+      : await booksApi.getGroups(localBookId);
     selectedGroupIds.value = currentGroups.map((group) => group.id);
   } catch (error) {
-    message.warning(`未能刷新《${book.title}》的最新分组，先使用当前页面数据。${getErrorMessage(error)}`);
+    message.warning(`?????${book.title}?????????????????${getErrorMessage(error)}`);
   }
 }
-
 async function handleSubmitBookGroups(groupIds: number[]) {
   if (!managingBook.value) {
     return;
   }
 
+  const localBookId = getLocalBookId(managingBook.value);
   bookGroupsSubmitting.value = true;
 
   try {
-    await booksApi.updateGroups(managingBook.value.id, { group_ids: groupIds });
-    message.success(`已更新《${managingBook.value.title}》的分组`);
+    if (localBookId === null) {
+      await onlineBooksApi.updateGroups(managingBook.value.entity_id, { group_ids: groupIds });
+    } else {
+      await booksApi.updateGroups(localBookId, { group_ids: groupIds });
+    }
+    message.success(`????${managingBook.value.title}????`);
     groupSelectorVisible.value = false;
-    await Promise.all([loadBooks(appliedSearch.value), loadGroups()]);
+    await Promise.all([loadLibraryBooks(appliedSearch.value), loadGroups()]);
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
     bookGroupsSubmitting.value = false;
   }
 }
-
 function handleMetadataUpdated() {
-  void loadBooks(appliedSearch.value);
+  void loadLibraryBooks(appliedSearch.value);
 }
 
 onMounted(() => {

@@ -21,6 +21,7 @@ from app.services.books import (
 )
 from app.services.chapter_rules import BUILTIN_RULES
 from app.services.chapter_splitter import ChapterSegment, split_book_into_chapters
+from app.services.library import list_library_books
 from app.services.reading_progress import get_user_reading_progress, upsert_user_reading_progress
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "replace_book_chapters",
     "split_book_into_chapters",
     "ChapterSegment",
+    "list_library_books",
     "BookAccessError",
     "BookNotFoundError",
     "BookChapterNotFoundError",

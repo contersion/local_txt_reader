@@ -88,7 +88,7 @@ def bootstrap_application() -> None:
 def _apply_sqlite_compat_migrations() -> None:
     inspector = inspect(database.engine)
     table_names = set(inspector.get_table_names())
-    if "books" not in table_names and "users" not in table_names:
+    if "books" not in table_names and "users" not in table_names and "online_shelf_books" not in table_names:
         return
 
     statements: list[str] = []

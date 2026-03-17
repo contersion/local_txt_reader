@@ -20,11 +20,21 @@ services:
       DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:-admin}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
       DEFAULT_TXT_ENCODING: ${DEFAULT_TXT_ENCODING:-utf-8}
+      ONLINE_REQUEST_TIMEOUT_SECONDS: ${ONLINE_REQUEST_TIMEOUT_SECONDS:-15}
+      ONLINE_RESPONSE_SIZE_LIMIT_BYTES: ${ONLINE_RESPONSE_SIZE_LIMIT_BYTES:-2097152}
+      ONLINE_DEFAULT_USER_AGENT: ${ONLINE_DEFAULT_USER_AGENT:-TXT-Reader/Phase1}
+      ONLINE_FOLLOW_REDIRECTS: ${ONLINE_FOLLOW_REDIRECTS:-true}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./backend/data:/app/data
       - ./backend/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
@@ -33,9 +43,16 @@ services:
         VITE_API_BASE_URL: "${VITE_API_BASE_URL:-}"
     container_name: txt-reader-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-24412}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 

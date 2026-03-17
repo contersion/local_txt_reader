@@ -2,7 +2,7 @@
   <div class="book-detail-page">
     <section class="book-detail-page__topbar">
       <n-button tertiary @click="goBack">返回书架</n-button>
-      <span class="book-detail-page__crumb">Book ID: {{ bookId }}</span>
+      <span class="book-detail-page__crumb">{{ detail?.source_kind === "online" ? "Online Book" : "Local Book" }}</span>
     </section>
 
     <section v-if="loading" class="book-detail-page__loading">
@@ -26,36 +26,38 @@
       </template>
     </page-status-panel>
 
-    <template v-else-if="book">
+    <template v-else-if="detail">
       <section class="detail-hero">
-        <div class="detail-hero__cover" :class="{ 'detail-hero__cover--filled': !!book.cover_url }">
+        <div class="detail-hero__cover" :class="{ 'detail-hero__cover--filled': !!detail.cover_url }">
           <img
             v-if="resolvedCoverUrl"
             class="detail-hero__cover-image"
             :src="resolvedCoverUrl"
-            :alt="`${book.title} 封面`"
+            :alt="`${detail.title} 封面`"
           />
           <template v-else>
-            <div class="detail-hero__cover-badge">TXT</div>
-            <div class="detail-hero__cover-letter">{{ getCoverLetter(book.title) }}</div>
+            <div class="detail-hero__cover-badge">{{ detail.source_kind === "online" ? "ONLINE" : "TXT" }}</div>
+            <div class="detail-hero__cover-letter">{{ getCoverLetter(detail.title) }}</div>
           </template>
         </div>
 
         <div class="detail-hero__body">
-          <div class="detail-hero__eyebrow">Book Detail</div>
-          <h1 class="detail-hero__title">{{ book.title }}</h1>
-          <p class="detail-hero__author">{{ book.author || "作者未填写" }}</p>
+          <div class="detail-hero__eyebrow">{{ detail.source_label }}</div>
+          <h1 class="detail-hero__title">{{ detail.title }}</h1>
+          <p class="detail-hero__author">{{ detail.author || "作者未填写" }}</p>
           <p class="detail-hero__description">
             {{
-              book.description ||
-              "这本书还没有补充简介，你可以先查看目录、继续阅读，或切换目录规则后重新解析。"
+              detail.description ||
+              (isLocal
+                ? "这本书还没有补充简介，你可以先查看目录、继续阅读，或切换目录规则后重新解析。"
+                : "这本在线书籍还没有补充简介，你可以先查看目录或直接进入阅读。")
             }}
           </p>
 
           <div class="detail-hero__tags">
-            <n-tag round :bordered="false">总章节 {{ formatNumber(book.total_chapters) }}</n-tag>
-            <n-tag round :bordered="false">总字数 {{ formatWordCount(book.total_words) }}</n-tag>
-            <n-tag round :bordered="false">当前规则 {{ currentRuleName }}</n-tag>
+            <n-tag round :bordered="false">总章节 {{ formatNumber(detail.total_chapters) }}</n-tag>
+            <n-tag round :bordered="false">{{ detail.source_label }}</n-tag>
+            <n-tag v-if="isLocal" round :bordered="false">总字数 {{ formatWordCount(detail.total_words) }}</n-tag>
             <n-tag round :bordered="false">{{ progressTagLabel }}</n-tag>
             <n-tag round :bordered="false">{{ progressPercentLabel }}</n-tag>
           </div>
@@ -67,7 +69,12 @@
             <n-button tertiary size="large" @click="openCatalog">
               查看目录
             </n-button>
-            <n-button secondary size="large" @click="openEditor">
+            <n-button
+              v-if="actions.canEditMetadata"
+              secondary
+              size="large"
+              @click="openEditor"
+            >
               编辑信息
             </n-button>
           </div>
@@ -83,7 +90,7 @@
           <div class="detail-info-grid">
             <div class="detail-info-item">
               <span>作者</span>
-              <strong>{{ book.author || "未填写" }}</strong>
+              <strong>{{ detail.author || "未填写" }}</strong>
             </div>
             <div class="detail-info-item">
               <span>阅读进度</span>
@@ -91,7 +98,7 @@
             </div>
             <div class="detail-info-item">
               <span>最近阅读</span>
-              <strong>{{ formatOptionalDate(book.recent_read_at) }}</strong>
+              <strong>{{ formatOptionalDate(detail.recent_read_at) }}</strong>
             </div>
             <div class="detail-info-item">
               <span>阅读定位</span>
@@ -100,16 +107,16 @@
             <div class="detail-info-item detail-info-item--wide">
               <span>简介</span>
               <strong class="detail-info-item__multiline">
-                {{ book.description || "暂无简介" }}
+                {{ detail.description || "暂无简介" }}
               </strong>
             </div>
           </div>
 
-          <div class="detail-group-list">
+          <div v-if="detail.groups.length > 0" class="detail-group-list">
             <span class="detail-group-list__label">分组</span>
             <div class="detail-group-list__tags">
               <n-tag
-                v-for="group in book.groups"
+                v-for="group in detail.groups"
                 :key="group.id"
                 round
                 :bordered="false"
@@ -121,7 +128,7 @@
           </div>
         </n-card>
 
-        <n-card :bordered="false" class="detail-card">
+        <n-card v-if="isLocal && detail.local_file" :bordered="false" class="detail-card">
           <template #header>
             <span class="detail-card__heading">文件信息</span>
           </template>
@@ -129,29 +136,54 @@
           <div class="detail-info-grid">
             <div class="detail-info-item">
               <span>文件名</span>
-              <strong>{{ book.file_name }}</strong>
+              <strong>{{ detail.local_file.file_name }}</strong>
             </div>
             <div class="detail-info-item">
               <span>编码</span>
-              <strong>{{ book.encoding }}</strong>
+              <strong>{{ detail.local_file.encoding }}</strong>
             </div>
             <div class="detail-info-item">
               <span>收录时间</span>
-              <strong>{{ formatDate(book.created_at) }}</strong>
+              <strong>{{ formatDate(detail.created_at) }}</strong>
             </div>
             <div class="detail-info-item">
               <span>更新时间</span>
-              <strong>{{ formatDate(book.updated_at) }}</strong>
+              <strong>{{ formatDate(detail.updated_at) }}</strong>
             </div>
           </div>
 
           <div class="detail-file-path">
             <span class="detail-file-path__label">本地文件</span>
-            <code>{{ book.file_path }}</code>
+            <code>{{ detail.local_file.file_path }}</code>
           </div>
         </n-card>
 
-        <n-card :bordered="false" class="detail-card detail-card--full">
+        <n-card v-else-if="detail.online_meta" :bordered="false" class="detail-card">
+          <template #header>
+            <span class="detail-card__heading">在线来源</span>
+          </template>
+
+          <div class="detail-info-grid">
+            <div class="detail-info-item">
+              <span>书源</span>
+              <strong>{{ detail.online_meta.source_name }}</strong>
+            </div>
+            <div class="detail-info-item">
+              <span>远端 ID</span>
+              <strong>{{ detail.online_meta.remote_book_id || "未提供" }}</strong>
+            </div>
+            <div class="detail-info-item">
+              <span>目录同步时间</span>
+              <strong>{{ formatOptionalDate(detail.online_meta.latest_catalog_fetched_at) }}</strong>
+            </div>
+            <div class="detail-info-item">
+              <span>详情链接</span>
+              <strong class="detail-info-item__multiline">{{ detail.online_meta.detail_url }}</strong>
+            </div>
+          </div>
+        </n-card>
+
+        <n-card v-if="isLocal" :bordered="false" class="detail-card detail-card--full">
           <template #header>
             <span class="detail-card__heading">目录规则</span>
           </template>
@@ -188,6 +220,7 @@
       </section>
 
       <n-modal
+        v-if="isLocal"
         v-model:show="editorVisible"
         preset="card"
         class="metadata-modal"
@@ -196,16 +229,16 @@
       >
         <div class="metadata-modal__layout">
           <div class="metadata-modal__cover-panel">
-            <div class="metadata-modal__cover" :class="{ 'metadata-modal__cover--filled': !!book.cover_url }">
+            <div class="metadata-modal__cover" :class="{ 'metadata-modal__cover--filled': !!detail.cover_url }">
               <img
                 v-if="resolvedCoverUrl"
                 class="metadata-modal__cover-image"
                 :src="resolvedCoverUrl"
-                :alt="`${book.title} 封面`"
+                :alt="`${detail.title} 封面`"
               />
               <template v-else>
                 <span class="metadata-modal__cover-type">TXT</span>
-                <strong class="metadata-modal__cover-letter">{{ getCoverLetter(book.title) }}</strong>
+                <strong class="metadata-modal__cover-letter">{{ getCoverLetter(detail.title) }}</strong>
                 <span class="metadata-modal__cover-text">无封面</span>
               </template>
             </div>
@@ -220,7 +253,7 @@
                 <n-button secondary :loading="coverUploading">上传封面</n-button>
               </n-upload>
               <n-button
-                v-if="book.cover_url"
+                v-if="detail.cover_url"
                 quaternary
                 type="error"
                 :loading="coverDeleting"
@@ -266,9 +299,9 @@
 
       <chapter-catalog-modal-drawer
         v-model:show="catalogVisible"
-        :book-title="book.title"
-        :chapter-count="book.total_chapters"
-        :chapters="chapters"
+        :book-title="detail.title"
+        :chapter-count="detail.total_chapters || 0"
+        :chapters="catalog"
         @select="handleCatalogSelect"
       />
     </template>
@@ -293,24 +326,25 @@ import {
 import { useRouter } from "vue-router";
 
 import { booksApi } from "../api/books";
-import { resolveApiAssetUrl, ApiError, getErrorMessage } from "../api/client";
+import { getErrorMessage } from "../api/client";
 import { chapterRulesApi } from "../api/chapter-rules";
 import ChapterCatalogModalDrawer from "../components/ChapterCatalogModalDrawer.vue";
+import { useBookDetailSource } from "../composables/useBookDetailSource";
 import PageStatusPanel from "../components/PageStatusPanel.vue";
-import type { BookChapter, BookDetail, ChapterRule, ReadingProgress } from "../types/api";
+import type { BookChapter, ChapterRule, LibraryBookDetail, ReadingProgress } from "../types/api";
 import { formatDateTime, formatNumber, formatPercent, formatWordCount } from "../utils/format";
 
 const props = defineProps<{
-  bookId: number;
+  libraryBookId: string;
 }>();
 
 const router = useRouter();
 const message = useMessage();
 const BOOK_METADATA_UPDATED_EVENT = "books:metadata-updated";
-const book = ref<BookDetail | null>(null);
-const chapters = ref<BookChapter[]>([]);
-const rules = ref<ChapterRule[]>([]);
+const detail = ref<LibraryBookDetail | null>(null);
+const catalog = ref<BookChapter[]>([]);
 const progress = ref<ReadingProgress | null>(null);
+const rules = ref<ChapterRule[]>([]);
 const selectedRuleId = ref<number | null>(null);
 const loading = ref(true);
 const pageError = ref<string | null>(null);
@@ -326,6 +360,13 @@ const editableTitle = ref("");
 const editableAuthor = ref("");
 const editableDescription = ref("");
 
+const isLocal = computed(() => detail.value?.source_kind === "local");
+const actions = computed(() => ({
+  canEditMetadata: detail.value?.source_kind === "local",
+  canUploadCover: detail.value?.source_kind === "local",
+  canReparseCatalog: detail.value?.source_kind === "local",
+}));
+
 const ruleOptions = computed(() => {
   return rules.value.map((rule) => ({
     label: rule.is_builtin ? `${rule.rule_name}（内置）` : rule.rule_name,
@@ -334,21 +375,21 @@ const ruleOptions = computed(() => {
 });
 
 const currentRuleName = computed(() => {
-  if (book.value?.chapter_rule?.rule_name) {
-    return book.value.chapter_rule.rule_name;
+  if (!detail.value?.chapter_rule?.rule_name) {
+    const selectedRule = rules.value.find((rule) => rule.id === selectedRuleId.value);
+    return selectedRule?.rule_name || "未指定";
   }
 
-  const selectedRule = rules.value.find((rule) => rule.id === selectedRuleId.value);
-  return selectedRule?.rule_name || "未指定";
+  return detail.value.chapter_rule.rule_name;
 });
 
 const currentRuleDescription = computed(() => {
-  if (book.value?.chapter_rule?.description) {
-    return book.value.chapter_rule.description;
+  if (!detail.value?.chapter_rule?.description) {
+    const selectedRule = rules.value.find((rule) => rule.id === selectedRuleId.value);
+    return selectedRule?.description || "你可以在这里切换规则，并重新解析当前书籍的目录。";
   }
 
-  const selectedRule = rules.value.find((rule) => rule.id === selectedRuleId.value);
-  return selectedRule?.description || "你可以在这里切换规则，并重新解析当前书籍的目录。";
+  return detail.value.chapter_rule.description;
 });
 
 const readActionLabel = computed(() => {
@@ -364,10 +405,10 @@ const progressTagLabel = computed(() => {
 });
 
 const progressPercentLabel = computed(() => {
-  return `进度 ${formatPercent(book.value?.progress_percent ?? progress.value?.percent ?? 0)}`;
+  return `进度 ${formatPercent(detail.value?.progress_percent ?? progress.value?.percent ?? 0)}`;
 });
 
-const resolvedCoverUrl = computed(() => resolveApiAssetUrl(book.value?.cover_url));
+const resolvedCoverUrl = computed(() => detail.value?.cover_url || null);
 
 function formatDate(value: string) {
   return formatDateTime(value, "时间未知");
@@ -382,33 +423,26 @@ function getCoverLetter(title: string) {
   return normalized ? normalized.slice(0, 1).toUpperCase() : "T";
 }
 
-function syncEditorFields(bookDetail: BookDetail) {
+function syncEditorFields(bookDetail: LibraryBookDetail) {
   editableTitle.value = bookDetail.title;
   editableAuthor.value = bookDetail.author || "";
   editableDescription.value = bookDetail.description || "";
 }
 
-async function loadBookAndChapters() {
-  const [bookDetail, chapterList] = await Promise.all([
-    booksApi.detail(props.bookId),
-    booksApi.chapters(props.bookId),
-  ]);
-
-  book.value = bookDetail;
-  chapters.value = chapterList;
-  selectedRuleId.value = bookDetail.chapter_rule_id;
-  syncEditorFields(bookDetail);
-}
-
 async function loadRules() {
-  rulesError.value = null;
+  if (!isLocal.value) {
+    rules.value = [];
+    rulesError.value = null;
+    selectedRuleId.value = null;
+    return;
+  }
 
+  rulesError.value = null;
   try {
     rules.value = await chapterRulesApi.list();
-
     if (!selectedRuleId.value) {
       selectedRuleId.value =
-        book.value?.chapter_rule_id ??
+        detail.value?.chapter_rule?.id ??
         rules.value.find((rule) => rule.is_default)?.id ??
         rules.value[0]?.id ??
         null;
@@ -419,29 +453,20 @@ async function loadRules() {
   }
 }
 
-async function loadProgress() {
-  try {
-    progress.value = await booksApi.getProgress(props.bookId);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      progress.value = null;
-      return;
-    }
-
-    progress.value = null;
-  }
-}
-
 async function loadPage() {
   loading.value = true;
   pageError.value = null;
 
   try {
-    await loadBookAndChapters();
-    await Promise.all([loadRules(), loadProgress()]);
+    const payload = await useBookDetailSource(props.libraryBookId).load();
+    detail.value = payload.detail;
+    catalog.value = payload.catalog;
+    progress.value = payload.progress;
+    syncEditorFields(payload.detail);
+    await loadRules();
   } catch (error) {
-    book.value = null;
-    chapters.value = [];
+    detail.value = null;
+    catalog.value = [];
     progress.value = null;
     pageError.value = getErrorMessage(error);
   } finally {
@@ -461,7 +486,7 @@ function goToChapter(chapterIndex: number) {
   void router.push({
     name: "reader",
     params: {
-      bookId: props.bookId,
+      libraryBookId: props.libraryBookId,
       chapterIndex,
     },
   });
@@ -472,11 +497,11 @@ function openCatalog() {
 }
 
 function openEditor() {
-  if (!book.value) {
+  if (!detail.value || !actions.value.canEditMetadata) {
     return;
   }
 
-  syncEditorFields(book.value);
+  syncEditorFields(detail.value);
   editorVisible.value = true;
 }
 
@@ -501,23 +526,21 @@ async function handleReadAction() {
 }
 
 async function handleSaveMetadata() {
-  if (!book.value) {
+  if (!detail.value || !isLocal.value) {
     return;
   }
 
   metadataSaving.value = true;
 
   try {
-    await booksApi.updateMetadata(book.value.id, {
+    await booksApi.updateMetadata(detail.value.entity_id, {
       title: editableTitle.value.trim() || null,
       author: editableAuthor.value.trim() || null,
       description: editableDescription.value.trim() || null,
     });
-    const refreshed = await booksApi.detail(book.value.id);
-    book.value = refreshed;
-    syncEditorFields(refreshed);
+    await loadPage();
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(BOOK_METADATA_UPDATED_EVENT, { detail: { bookId: book.value.id } }));
+      window.dispatchEvent(new CustomEvent(BOOK_METADATA_UPDATED_EVENT, { detail: { libraryBookId: props.libraryBookId } }));
     }
     editorVisible.value = false;
     message.success("书籍信息已保存");
@@ -529,7 +552,7 @@ async function handleSaveMetadata() {
 }
 
 async function handleCoverUpload(options: UploadCustomRequestOptions) {
-  if (!book.value) {
+  if (!detail.value || !isLocal.value) {
     options.onError?.();
     return;
   }
@@ -544,8 +567,8 @@ async function handleCoverUpload(options: UploadCustomRequestOptions) {
   coverUploading.value = true;
 
   try {
-    const updated = await booksApi.uploadCover(book.value.id, file);
-    book.value = updated;
+    await booksApi.uploadCover(detail.value.entity_id, file);
+    await loadPage();
     options.onFinish?.();
     message.success("封面已更新");
   } catch (error) {
@@ -557,16 +580,15 @@ async function handleCoverUpload(options: UploadCustomRequestOptions) {
 }
 
 async function handleRemoveCover() {
-  if (!book.value) {
+  if (!detail.value || !isLocal.value) {
     return;
   }
 
   coverDeleting.value = true;
 
   try {
-    await booksApi.deleteCover(book.value.id);
-    const refreshed = await booksApi.detail(book.value.id);
-    book.value = refreshed;
+    await booksApi.deleteCover(detail.value.entity_id);
+    await loadPage();
     message.success("封面已删除");
   } catch (error) {
     message.error(getErrorMessage(error));
@@ -576,6 +598,10 @@ async function handleRemoveCover() {
 }
 
 async function handleReparse() {
+  if (!detail.value || !isLocal.value) {
+    return;
+  }
+
   if (!selectedRuleId.value) {
     message.warning("请先选择一个目录规则");
     return;
@@ -584,9 +610,9 @@ async function handleReparse() {
   reparsePending.value = true;
 
   try {
-    await booksApi.reparse(props.bookId, selectedRuleId.value);
+    await booksApi.reparse(detail.value.entity_id, selectedRuleId.value);
     message.success("目录已重新解析");
-    await loadBookAndChapters();
+    await loadPage();
   } catch (error) {
     message.error(getErrorMessage(error));
   } finally {
@@ -595,7 +621,7 @@ async function handleReparse() {
 }
 
 watch(
-  () => props.bookId,
+  () => props.libraryBookId,
   () => {
     catalogVisible.value = false;
     editorVisible.value = false;
@@ -785,6 +811,7 @@ watch(
 
 .detail-info-item__multiline {
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .detail-group-list {

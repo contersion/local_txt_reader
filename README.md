@@ -588,3 +588,44 @@ docker compose logs -f frontend
 - 前端还有单独的说明文档：[`frontend/README.md`](./frontend/README.md)
 - 开发过程文档在：[`docs/IMPLEMENTATION_STEPS.md`](./docs/IMPLEMENTATION_STEPS.md)
 - 当前版本更新说明见：[`UPDATE.md`](./UPDATE.md)
+
+
+## Legado Phase 2 状态
+
+当前项目已完成 Legado Phase 2 的“静态 importer 第一阶段”。
+
+本阶段能力包括：
+- 严格白名单导入
+- 静态字段映射
+- alias 归一化
+- CSS / JSoup 静态归一化
+- 错误码体系
+- issue 结构化输出
+- 最小样本矩阵
+- Traceability 追溯索引
+- importer 回归测试
+
+本阶段明确不包括：
+- JS
+- Cookie / 登录态
+- WebView
+- 多请求链
+- 复杂变量
+- replace / 净化 DSL
+- 高兼容运行时
+
+相关文档入口：
+- `docs/LEGADO_PHASE2_INDEX.md`
+
+### Legado Phase 2
+- 完成 Phase 2 最终收尾与验收闭环
+- 补齐 9 个已实现错误码的样例矩阵、Traceability 与自动化测试
+- 新增导入后 `detail -> catalog -> chapter` 正式回归测试
+- 修正 validator 重复 issue 报告问题
+- 完成 Phase 2 状态、索引、验收文档更新
+
+### 验证
+- `pytest` 通过：`50 passed`
+
+### 结论
+- Phase 2 已正式完成

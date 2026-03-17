@@ -44,22 +44,22 @@ const router = createRouter({
           },
         },
         {
-          path: "books/:bookId",
+          path: "books/:libraryBookId",
           name: "book-detail",
           component: BookDetailPage,
           props: (route) => ({
-            bookId: Number(route.params.bookId),
+            libraryBookId: String(route.params.libraryBookId),
           }),
           meta: {
             title: "书籍详情",
           },
         },
         {
-          path: "reader/:bookId/:chapterIndex?",
+          path: "reader/:libraryBookId/:chapterIndex?",
           name: "reader",
           component: ReaderPage,
           props: (route) => ({
-            bookId: Number(route.params.bookId),
+            libraryBookId: String(route.params.libraryBookId),
             chapterIndex: route.params.chapterIndex ? Number(route.params.chapterIndex) : 0,
           }),
           meta: {

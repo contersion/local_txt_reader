@@ -4,8 +4,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import Book, BookGroup
+from app.models import Book, BookGroup, OnlineShelfBook
 from app.models.book_group_membership import book_group_memberships
+from app.models.online_book_group_membership import online_book_group_memberships
 
 
 DEFAULT_BOOK_GROUP_NAME = "默认分组"
@@ -26,14 +27,12 @@ class BookGroupDeleteConflictError(BookGroupError):
 
 def list_groups(db: Session, user_id: int) -> list[dict[str, object]]:
     statement = (
-        select(BookGroup, func.count(book_group_memberships.c.book_id).label("book_count"))
-        .outerjoin(book_group_memberships, book_group_memberships.c.group_id == BookGroup.id)
+        select(BookGroup)
         .where(BookGroup.user_id == user_id)
-        .group_by(BookGroup.id)
         .order_by(BookGroup.is_default.desc(), BookGroup.name.asc())
     )
-    rows = db.execute(statement).all()
-    return [_serialize_group(group, int(book_count or 0)) for group, book_count in rows]
+    groups = list(db.execute(statement).scalars().all())
+    return [_get_group_payload(db, group) for group in groups]
 
 
 def create_group(db: Session, user_id: int, name: str) -> dict[str, object]:
@@ -135,7 +134,8 @@ def ensure_default_group(db: Session, user_id: int) -> BookGroup:
 
 
 def ensure_all_user_book_groups(db: Session) -> None:
-    user_ids = db.execute(select(Book.user_id).distinct()).scalars().all()
+    user_ids = set(db.execute(select(Book.user_id).distinct()).scalars().all())
+    user_ids.update(db.execute(select(OnlineShelfBook.user_id).distinct()).scalars().all())
     for user_id in user_ids:
         _backfill_missing_book_groups(db, user_id)
 
@@ -158,6 +158,20 @@ def _backfill_missing_book_groups(db: Session, user_id: int) -> None:
     default_group = ensure_default_group(db, user_id)
     for book in books_without_groups:
         book.groups.append(default_group)
+
+    online_books = list(
+        db.execute(
+            select(OnlineShelfBook)
+            .options(selectinload(OnlineShelfBook.groups))
+            .where(OnlineShelfBook.user_id == user_id)
+        )
+        .scalars()
+        .unique()
+        .all()
+    )
+    online_books_without_groups = [book for book in online_books if not book.groups]
+    for online_book in online_books_without_groups:
+        online_book.groups.append(default_group)
 
 
 def _normalize_group_name(name: str) -> str:
@@ -188,7 +202,20 @@ def _has_books_that_only_belong_to_group(db: Session, user_id: int, group_id: in
         .group_by(Book.id)
         .having(func.count(book_group_memberships.c.group_id) <= 1)
     )
-    return db.execute(statement.limit(1)).first() is not None
+    if db.execute(statement.limit(1)).first() is not None:
+        return True
+
+    online_group_book_ids = select(online_book_group_memberships.c.online_book_id).where(
+        online_book_group_memberships.c.group_id == group_id
+    )
+    online_statement = (
+        select(OnlineShelfBook.id)
+        .join(online_book_group_memberships, online_book_group_memberships.c.online_book_id == OnlineShelfBook.id)
+        .where(OnlineShelfBook.user_id == user_id, OnlineShelfBook.id.in_(online_group_book_ids))
+        .group_by(OnlineShelfBook.id)
+        .having(func.count(online_book_group_memberships.c.group_id) <= 1)
+    )
+    return db.execute(online_statement.limit(1)).first() is not None
 
 
 def _promote_replacement_default_group(db: Session, user_id: int) -> None:
@@ -212,9 +239,13 @@ def _get_default_group(db: Session, user_id: int) -> BookGroup | None:
 
 
 def _get_group_payload(db: Session, group: BookGroup) -> dict[str, object]:
-    count_statement = select(func.count(book_group_memberships.c.book_id)).where(book_group_memberships.c.group_id == group.id)
-    book_count = db.execute(count_statement).scalar_one()
-    return _serialize_group(group, int(book_count or 0))
+    local_count_statement = select(func.count(book_group_memberships.c.book_id)).where(book_group_memberships.c.group_id == group.id)
+    online_count_statement = select(func.count(online_book_group_memberships.c.online_book_id)).where(
+        online_book_group_memberships.c.group_id == group.id
+    )
+    local_book_count = db.execute(local_count_statement).scalar_one()
+    online_book_count = db.execute(online_count_statement).scalar_one()
+    return _serialize_group(group, int(local_book_count or 0) + int(online_book_count or 0))
 
 
 def _serialize_group(group: BookGroup, book_count: int) -> dict[str, object]:

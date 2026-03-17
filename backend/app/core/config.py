@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     default_admin_username: str = "admin"
     default_admin_password: str = "admin123"
     default_txt_encoding: str = "utf-8"
+    online_request_timeout_seconds: int = 15
+    online_response_size_limit_bytes: int = 2 * 1024 * 1024
+    online_default_user_agent: str = "TXT-Reader/Phase1"
+    online_follow_redirects: bool = True
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
