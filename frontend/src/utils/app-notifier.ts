@@ -7,6 +7,10 @@ const { message } = createDiscreteApi(["message"]);
 let handlersInstalled = false;
 let lastShownMessage = "";
 let lastShownAt = 0;
+const RESIZE_OBSERVER_BROWSER_NOISE_MESSAGES = new Set([
+  "ResizeObserver loop completed with undelivered notifications.",
+  "ResizeObserver loop limit exceeded",
+]);
 
 function shouldSuppressDuplicate(messageText: string) {
   const now = Date.now();
@@ -46,6 +50,23 @@ export function notifyGlobalError(error: unknown, fallback?: string) {
   });
 }
 
+function isIgnoredWindowErrorEvent(event: ErrorEvent) {
+  const messageText = typeof event.message === "string" ? event.message.trim() : "";
+  if (!RESIZE_OBSERVER_BROWSER_NOISE_MESSAGES.has(messageText)) {
+    return false;
+  }
+
+  // Keep real runtime exceptions visible if the browser attached an actual error object.
+  if (event.error != null) {
+    return false;
+  }
+
+  const filename = typeof event.filename === "string" ? event.filename.trim() : "";
+  const hasSourceLocation = filename.length > 0 || event.lineno > 0 || event.colno > 0;
+
+  return !hasSourceLocation;
+}
+
 export function installGlobalErrorHandling() {
   if (handlersInstalled || typeof window === "undefined") {
     return;
@@ -54,6 +75,10 @@ export function installGlobalErrorHandling() {
   handlersInstalled = true;
 
   window.addEventListener("error", (event) => {
+    if (isIgnoredWindowErrorEvent(event)) {
+      return;
+    }
+
     notifyGlobalError(event.error ?? event.message, "页面出现异常，请刷新后重试");
   });
 
