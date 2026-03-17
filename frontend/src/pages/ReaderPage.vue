@@ -312,6 +312,8 @@ import { authTokenStorage } from "../utils/token";
 const PROGRESS_THROTTLE_MS = 15000;
 const READER_SCROLL_ANCHOR = 120;
 const COMPACT_BREAKPOINT = 980;
+const MOBILE_CONTENT_WIDTH_MIN_PERCENT = 84;
+const MOBILE_CONTENT_WIDTH_MAX_PERCENT = 100;
 
 type ProgressSnapshot = ReadingProgressPayload;
 type ReaderDrawerView = "catalog" | "settings";
@@ -472,6 +474,7 @@ const readerStyleVars = computed(() => ({
   "--reader-letter-spacing": `${preferences.letterSpacing}px`,
   "--reader-paragraph-spacing": String(preferences.paragraphSpacing),
   "--reader-content-width": `${preferences.contentWidth}ch`,
+  "--reader-content-width-mobile": `${mapReaderContentWidthForMobile(preferences.contentWidth)}%`,
 }));
 
 watch(
@@ -547,6 +550,13 @@ function clamp(value: number, min: number, max: number) {
 
 function roundPercent(value: number) {
   return Number(value.toFixed(2));
+}
+
+function mapReaderContentWidthForMobile(contentWidth: number) {
+  const ratio = clamp((contentWidth - 56) / (96 - 56), 0, 1);
+  const percent = MOBILE_CONTENT_WIDTH_MIN_PERCENT
+    + (MOBILE_CONTENT_WIDTH_MAX_PERCENT - MOBILE_CONTENT_WIDTH_MIN_PERCENT) * ratio;
+  return Number(percent.toFixed(2));
 }
 
 function getRouteChapterState(): RouteChapterState {
@@ -630,11 +640,12 @@ function buildReaderParagraphs(content: string) {
   }
 
   const paragraphs = content
-    .replace(/\r\n/g, "\n")
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trimEnd());
+    .replace(/\r\n?/g, "\n")
+    .split(/\n+/)
+    .map((paragraph) => paragraph.replace(/^[\s\u3000]+/u, "").trim())
+    .filter((paragraph) => paragraph.length > 0);
 
-  return paragraphs.length > 0 ? paragraphs : [content];
+  return paragraphs.length > 0 ? paragraphs : [content.trim()];
 }
 
 function isReaderChapterWhitespace(character: string) {
@@ -1457,7 +1468,8 @@ function goBack() {
 
 .reader-content {
   position: relative;
-  max-width: var(--reader-content-width);
+  width: min(100%, var(--reader-content-width));
+  max-width: 100%;
   margin: 0 auto;
   color: var(--reader-body);
   font-size: var(--reader-font-size);
@@ -1469,6 +1481,7 @@ function goBack() {
 
 .reader-content__paragraph {
   margin: 0;
+  text-indent: 2em;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -1667,7 +1680,7 @@ function goBack() {
   }
 
   .reader-stage__stat {
-    justify-items: start;
+    display: none;
   }
 
   .reader-paper {
@@ -1707,7 +1720,7 @@ function goBack() {
   }
 
   .reader-content {
-    max-width: none;
+    width: var(--reader-content-width-mobile);
   }
 
   .reader-drawer__summary {
