@@ -30,16 +30,18 @@
     <template v-else>
       <div class="reader-desktop-shell">
         <aside class="reader-side-card reader-side-card--left">
-          <div class="reader-side-card__group">
-            <span class="reader-side-card__eyebrow">阅读工具</span>
-            <strong class="reader-side-card__title">{{ currentChapterPositionLabel }}</strong>
-            <p class="reader-side-card__meta">{{ bookTitle || "当前书籍" }}</p>
-          </div>
+          <div class="reader-side-card__body">
+            <div class="reader-side-card__group">
+              <span class="reader-side-card__eyebrow">阅读工具</span>
+              <strong class="reader-side-card__title">{{ currentChapterPositionLabel }}</strong>
+              <p class="reader-side-card__meta">{{ bookTitle || "当前书籍" }}</p>
+            </div>
 
-          <div class="reader-side-card__stack">
-            <n-button tertiary @click="goBack">返回详情</n-button>
-            <n-button secondary @click="openDrawer('catalog')">目录</n-button>
-            <n-button secondary @click="openDrawer('settings')">设置</n-button>
+            <div class="reader-side-card__stack">
+              <n-button tertiary @click="goBack">返回详情</n-button>
+              <n-button secondary @click="openDrawer('catalog')">目录</n-button>
+              <n-button secondary @click="openDrawer('settings')">设置</n-button>
+            </div>
           </div>
         </aside>
 
@@ -114,30 +116,32 @@
         </div>
 
         <aside class="reader-side-card reader-side-card--right">
-          <div class="reader-side-card__group">
-            <span class="reader-side-card__eyebrow">同步状态</span>
-            <strong class="reader-side-card__title">{{ syncStatusLabel }}</strong>
-            <p class="reader-side-card__meta">{{ syncedProgressLabel }}</p>
-          </div>
+          <div class="reader-side-card__body">
+            <div class="reader-side-card__group">
+              <span class="reader-side-card__eyebrow">同步状态</span>
+              <strong class="reader-side-card__title">{{ syncStatusLabel }}</strong>
+              <p class="reader-side-card__meta">{{ syncedProgressLabel }}</p>
+            </div>
 
-          <div class="reader-side-card__group">
-            <span class="reader-side-card__eyebrow">阅读进度</span>
-            <strong class="reader-side-card__percent">{{ progressPercentLabel }}</strong>
-            <n-progress
-              type="line"
-              :percentage="currentProgressPercent"
-              :show-indicator="false"
-              color="var(--reader-accent)"
-              rail-color="var(--reader-progress-rail)"
-            />
-            <p class="reader-side-card__meta">{{ currentChapterPositionLabel }}</p>
-          </div>
+            <div class="reader-side-card__group">
+              <span class="reader-side-card__eyebrow">阅读进度</span>
+              <strong class="reader-side-card__percent">{{ progressPercentLabel }}</strong>
+              <n-progress
+                type="line"
+                :percentage="currentProgressPercent"
+                :show-indicator="false"
+                color="var(--reader-accent)"
+                rail-color="var(--reader-progress-rail)"
+              />
+              <p class="reader-side-card__meta">{{ currentChapterPositionLabel }}</p>
+            </div>
 
-          <div class="reader-side-card__stack">
-            <n-button :disabled="!canGoPrev || chapterLoading" @click="handlePrevChapter">上一章</n-button>
-            <n-button type="primary" :disabled="!canGoNext || chapterLoading" @click="handleNextChapter">
-              下一章
-            </n-button>
+            <div class="reader-side-card__stack">
+              <n-button :disabled="!canGoPrev || chapterLoading" @click="handlePrevChapter">上一章</n-button>
+              <n-button type="primary" :disabled="!canGoNext || chapterLoading" @click="handleNextChapter">
+                下一章
+              </n-button>
+            </div>
           </div>
         </aside>
       </div>
@@ -607,6 +611,10 @@ function goBack() {
   min-height: 100vh;
   padding: 24px;
   background: var(--surface-color);
+  --reader-shell-max-width: 1360px;
+  --reader-rail-width: 220px;
+  --reader-shell-gap: 24px;
+  --reader-desktop-padding: 24px;
 }
 
 .reader-page__state {
@@ -778,6 +786,11 @@ function goBack() {
 }
 
 @media (min-width: 1180px) {
+  .reader-page {
+    --reader-shell-width: min(var(--reader-shell-max-width), calc(100vw - (var(--reader-desktop-padding) * 2)));
+    --reader-shell-left: calc((100vw - var(--reader-shell-width)) / 2);
+  }
+
   .reader-desktop-shell {
     width: min(1360px, 100%);
     margin: 0 auto;
@@ -806,8 +819,14 @@ function goBack() {
   }
 
   .reader-side-card {
-    position: sticky;
-    top: 50dvh;
+    position: relative;
+    display: block;
+  }
+
+  .reader-side-card__body {
+    position: fixed;
+    top: 50%;
+    width: var(--reader-rail-width);
     display: grid;
     gap: 18px;
     padding: 20px;
@@ -819,6 +838,14 @@ function goBack() {
     overflow: auto;
     scrollbar-gutter: stable both-edges;
     transform: translateY(-50%);
+  }
+
+  .reader-side-card--left .reader-side-card__body {
+    left: var(--reader-shell-left);
+  }
+
+  .reader-side-card--right .reader-side-card__body {
+    left: calc(var(--reader-shell-left) + var(--reader-shell-width) - var(--reader-rail-width));
   }
 
   .reader-side-card__group {
@@ -868,7 +895,7 @@ function goBack() {
 }
 
 @media (min-width: 1180px) and (max-height: 920px) {
-  .reader-side-card {
+  .reader-side-card__body {
     top: 24px;
     transform: none;
   }
