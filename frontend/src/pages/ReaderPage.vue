@@ -28,56 +28,101 @@
     </page-status-panel>
 
     <template v-else>
-      <section class="reader-header">
-        <div>
-          <p v-if="bookTitle" class="reader-header__book">{{ bookTitle }}</p>
-          <h1 class="reader-header__title">{{ currentChapterTitle }}</h1>
-          <p class="reader-header__meta">{{ currentChapterPositionLabel }} · {{ progressPercentLabel }}</p>
-        </div>
-        <div class="reader-header__actions">
-          <n-button secondary @click="openDrawer('catalog')">目录</n-button>
-          <n-button secondary @click="openDrawer('settings')">设置</n-button>
-          <n-button tertiary @click="goBack">返回详情</n-button>
-        </div>
-      </section>
+      <div class="reader-desktop-shell">
+        <aside class="reader-side-card reader-side-card--left">
+          <div class="reader-side-card__group">
+            <span class="reader-side-card__eyebrow">阅读工具</span>
+            <strong class="reader-side-card__title">{{ currentChapterPositionLabel }}</strong>
+            <p class="reader-side-card__meta">{{ bookTitle || "当前书籍" }}</p>
+          </div>
 
-      <div
-        v-if="isMobileViewport"
-        class="reader-mobile-actions"
-        :class="{ 'reader-mobile-actions--visible': mobileActionLayerVisible }"
-        @click.stop
-      >
-        <n-button tertiary @click="goBack">返回详情</n-button>
-        <n-button secondary @click="openDrawer('catalog')">目录</n-button>
-        <n-button secondary @click="openDrawer('settings')">设置</n-button>
-      </div>
+          <div class="reader-side-card__stack">
+            <n-button tertiary @click="goBack">返回详情</n-button>
+            <n-button secondary @click="openDrawer('catalog')">目录</n-button>
+            <n-button secondary @click="openDrawer('settings')">设置</n-button>
+          </div>
+        </aside>
 
-      <section class="reader-paper">
-        <n-alert v-if="chapterError" type="error" :show-icon="false" class="reader-paper__alert">
-          {{ chapterError }}
-        </n-alert>
+        <div class="reader-stage">
+          <section class="reader-header">
+            <div>
+              <p v-if="bookTitle" class="reader-header__book">{{ bookTitle }}</p>
+              <h1 class="reader-header__title">{{ currentChapterTitle }}</h1>
+              <p class="reader-header__meta">{{ currentChapterPositionLabel }} · {{ progressPercentLabel }}</p>
+            </div>
+            <div class="reader-header__actions">
+              <n-button secondary @click="openDrawer('catalog')">目录</n-button>
+              <n-button secondary @click="openDrawer('settings')">设置</n-button>
+              <n-button tertiary @click="goBack">返回详情</n-button>
+            </div>
+          </section>
 
-        <article
-          ref="contentRef"
-          class="reader-content"
-          :class="{ 'reader-content--loading': chapterLoading }"
-          @click="handleReaderContentTap"
-        >
-          <template v-if="currentChapter">
-            <p
-              v-for="(paragraph, index) in currentChapterParagraphs"
-              :key="`paragraph-${currentChapterIndex}-${index}`"
-              class="reader-content__paragraph"
+          <div
+            v-if="isMobileViewport"
+            class="reader-mobile-actions"
+            :class="{ 'reader-mobile-actions--visible': mobileActionLayerVisible }"
+            @click.stop
+          >
+            <n-button tertiary @click="goBack">返回详情</n-button>
+            <n-button secondary @click="openDrawer('catalog')">目录</n-button>
+            <n-button secondary @click="openDrawer('settings')">设置</n-button>
+          </div>
+
+          <section class="reader-paper">
+            <n-alert v-if="chapterError" type="error" :show-icon="false" class="reader-paper__alert">
+              {{ chapterError }}
+            </n-alert>
+
+            <article
+              ref="contentRef"
+              class="reader-content"
+              :class="{ 'reader-content--loading': chapterLoading }"
+              @click="handleReaderContentTap"
             >
-              {{ paragraph }}
-            </p>
-          </template>
-          <template v-else>正文载入中...</template>
-        </article>
+              <template v-if="currentChapter">
+                <p
+                  v-for="(paragraph, index) in currentChapterParagraphs"
+                  :key="`paragraph-${currentChapterIndex}-${index}`"
+                  class="reader-content__paragraph"
+                >
+                  {{ paragraph }}
+                </p>
+              </template>
+              <template v-else>正文载入中...</template>
+            </article>
 
-        <div class="reader-footer">
-          <div class="reader-footer__progress">
-            <span>{{ syncedProgressLabel }}</span>
+            <div class="reader-footer">
+              <div class="reader-footer__progress">
+                <span>{{ syncedProgressLabel }}</span>
+                <n-progress
+                  type="line"
+                  :percentage="currentProgressPercent"
+                  :show-indicator="false"
+                  color="var(--reader-accent)"
+                  rail-color="var(--reader-progress-rail)"
+                />
+              </div>
+
+              <div class="reader-footer__actions">
+                <n-button :disabled="!canGoPrev || chapterLoading" @click="handlePrevChapter">上一章</n-button>
+                <n-button type="primary" :disabled="!canGoNext || chapterLoading" @click="handleNextChapter">
+                  下一章
+                </n-button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="reader-side-card reader-side-card--right">
+          <div class="reader-side-card__group">
+            <span class="reader-side-card__eyebrow">同步状态</span>
+            <strong class="reader-side-card__title">{{ syncStatusLabel }}</strong>
+            <p class="reader-side-card__meta">{{ syncedProgressLabel }}</p>
+          </div>
+
+          <div class="reader-side-card__group">
+            <span class="reader-side-card__eyebrow">阅读进度</span>
+            <strong class="reader-side-card__percent">{{ progressPercentLabel }}</strong>
             <n-progress
               type="line"
               :percentage="currentProgressPercent"
@@ -85,16 +130,17 @@
               color="var(--reader-accent)"
               rail-color="var(--reader-progress-rail)"
             />
+            <p class="reader-side-card__meta">{{ currentChapterPositionLabel }}</p>
           </div>
 
-          <div class="reader-footer__actions">
+          <div class="reader-side-card__stack">
             <n-button :disabled="!canGoPrev || chapterLoading" @click="handlePrevChapter">上一章</n-button>
             <n-button type="primary" :disabled="!canGoNext || chapterLoading" @click="handleNextChapter">
               下一章
             </n-button>
           </div>
-        </div>
-      </section>
+        </aside>
+      </div>
     </template>
 
     <n-drawer v-model:show="isDrawerOpen" placement="left" :width="drawerWidth">
@@ -218,6 +264,18 @@ const currentChapterPositionLabel = computed(() => chapters.value.length === 0 ?
 const currentProgressPercent = computed(() => sessionProgress.value?.percent ?? progress.value?.percent ?? 0);
 const progressPercentLabel = computed(() => formatPercent(currentProgressPercent.value));
 const syncedProgressLabel = computed(() => `${syncState.value === "error" ? "同步待重试" : "当前进度"} · ${progressPercentLabel.value}`);
+const syncStatusLabel = computed(() => {
+  if (syncState.value === "error") {
+    return "待重试";
+  }
+  if (syncState.value === "syncing") {
+    return "同步中";
+  }
+  if (syncState.value === "pending") {
+    return "待同步";
+  }
+  return "已同步";
+});
 const canGoPrev = computed(() => currentChapterIndex.value > 0);
 const canGoNext = computed(() => currentChapterIndex.value < chapters.value.length - 1);
 const isMobileViewport = computed(() => viewportWidth.value <= MOBILE_BREAKPOINT);
@@ -559,9 +617,18 @@ function goBack() {
   background: var(--surface-raised);
 }
 
-.reader-header {
+.reader-desktop-shell {
+  position: relative;
+}
+
+.reader-stage {
   width: min(920px, 100%);
-  margin: 0 auto 24px;
+  margin: 0 auto;
+}
+
+.reader-header {
+  width: 100%;
+  margin: 0 0 24px;
   display: flex;
   justify-content: space-between;
   gap: 24px;
@@ -620,9 +687,13 @@ function goBack() {
   border-radius: 16px;
 }
 
+.reader-side-card {
+  display: none;
+}
+
 .reader-paper {
-  width: min(920px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 28px;
   border-radius: 28px;
   background: var(--surface-raised);
@@ -647,6 +718,7 @@ function goBack() {
 
 .reader-content__paragraph {
   margin: 0;
+  text-indent: 2em;
   white-space: pre-wrap;
 }
 
@@ -703,6 +775,92 @@ function goBack() {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+@media (min-width: 1180px) {
+  .reader-desktop-shell {
+    width: min(1360px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr) 220px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .reader-stage {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .reader-header {
+    margin-bottom: 30px;
+  }
+
+  .reader-header__title {
+    font-size: clamp(36px, 4vw, 64px);
+    line-height: 1.05;
+  }
+
+  .reader-header__actions {
+    display: none;
+  }
+
+  .reader-side-card {
+    position: sticky;
+    top: 24px;
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+    border: 1px solid var(--border-color-soft);
+    border-radius: 26px;
+    background: color-mix(in srgb, var(--surface-raised) 90%, white 10%);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .reader-side-card__group {
+    display: grid;
+    gap: 8px;
+  }
+
+  .reader-side-card__eyebrow {
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .reader-side-card__title,
+  .reader-side-card__percent {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .reader-side-card__meta {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .reader-side-card__stack {
+    display: grid;
+    gap: 12px;
+  }
+
+  .reader-side-card__stack :deep(.n-button) {
+    min-height: 44px;
+    border-radius: 16px;
+  }
+
+  .reader-paper {
+    padding: 32px 40px;
+    border-radius: 32px;
+  }
+
+  .reader-footer {
+    display: none;
+  }
 }
 
 @media (max-width: 820px) {
