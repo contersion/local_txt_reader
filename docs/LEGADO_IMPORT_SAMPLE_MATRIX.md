@@ -21,6 +21,15 @@
 
 ---
 
+## 样本覆盖摘要
+
+- 当前样本总数：`29`
+- 分类概览：`success = 6`、`warning = 5`、`reject = 18`
+- Phase 2 验收基线样本范围：`S1-S29`
+- 当前矩阵用于固定 Legado 静态 importer 第一阶段的最小样本闭环；新增样本时不得改写现有样本编号语义。
+
+---
+
 ## 样本类别
 
 - `success`
@@ -618,12 +627,12 @@
 
 ## 维护约定
 
-1. Every new importer sample added to tests should be documented here.
-2. Every sample here should have at least one matching regression test.
-3. If a sample changes category (`success` / `warning` / `reject`), update both:
-   - this matrix
-   - the matching test assertion
-4. If a new error code is introduced, update:
+1. 每个新增到测试中的 importer 样本，都应同步登记到本文档。
+2. 本文档中的每个样本，都应至少有一条对应回归测试。
+3. 若样本类别发生变化（`success` / `warning` / `reject`），必须同时更新：
+   - 本样本矩阵
+   - 对应测试断言
+4. 若新增错误码，并影响到某个样本，必须同时更新：
    - [Legado Import 错误码（Phase 2）](./LEGADO_IMPORT_ERROR_CODES.md)
    - [Legado 字段映射规范（Phase 2）](./LEGADO_FIELD_MAPPING_PHASE2.md)
-   - this sample matrix, when affected
+   - 本样本矩阵中的受影响条目

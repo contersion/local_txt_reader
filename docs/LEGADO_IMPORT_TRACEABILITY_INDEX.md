@@ -263,7 +263,75 @@ Phase 2 当前**仍不包含**：
 
 ---
 
-## 11. 归一化行为索引
+## 11. 反向索引：错误码 -> 样本 -> 测试
+
+| 错误码 | 样本 ID | 对应测试函数 | 备注 |
+| --- | --- | --- | --- |
+| `LEGADO_UNSUPPORTED_JS` | `S4` | `test_validate_legado_import_rejects_js` | 覆盖 JS 拒绝 |
+| `LEGADO_UNSUPPORTED_COOKIE` | `S5` | `test_validate_legado_import_rejects_cookie_and_login_state` | 与登录态一并覆盖 |
+| `LEGADO_UNSUPPORTED_AUTHORIZATION` | `S21` | `test_validate_legado_import_rejects_authorization_header` | 覆盖同码同路径去重 |
+| `LEGADO_UNSUPPORTED_LOGIN_STATE` | `S5` | `test_validate_legado_import_rejects_cookie_and_login_state` | 当前通过 `loginUrl` 样本覆盖 |
+| `LEGADO_UNSUPPORTED_WEBVIEW` | `S6` | `test_validate_legado_import_rejects_webview_and_proxy` | 与 `proxy` 同样本 |
+| `LEGADO_UNSUPPORTED_PROXY` | `S6` | `test_validate_legado_import_rejects_webview_and_proxy` | 与 `webView` 同样本 |
+| `LEGADO_UNSUPPORTED_DYNAMIC_VARIABLE` | `S22` | `test_validate_legado_import_rejects_dynamic_variable_fields` | 9 个补齐错误码之一 |
+| `LEGADO_UNSUPPORTED_CONDITION_DSL` | `S23` | `test_validate_legado_import_rejects_condition_dsl` | 9 个补齐错误码之一 |
+| `LEGADO_UNSUPPORTED_CHARSET_OVERRIDE` | `S7` | `test_validate_legado_import_rejects_charset_override` | - |
+| `LEGADO_UNSUPPORTED_REPLACE_DSL` | `S8` | `test_validate_legado_import_rejects_replace_dsl` | - |
+| `LEGADO_UNSUPPORTED_PARSER` | `S14`, `S15` | `test_validate_legado_import_rejects_unsupported_parser_prefix`; `test_validate_legado_import_rejects_complex_html_dsl` | 覆盖未知 parser 前缀与复杂 HTML DSL |
+| `LEGADO_UNSUPPORTED_METHOD` | `S24` | `test_validate_legado_import_rejects_unsupported_method` | 9 个补齐错误码之一 |
+| `LEGADO_UNSUPPORTED_PLACEHOLDER` | `S10` | `test_validate_legado_import_rejects_unknown_placeholder` | - |
+| `LEGADO_UNSUPPORTED_MULTI_REQUEST` | `S25` | `test_validate_legado_import_rejects_multi_request_structures` | 覆盖同码同路径去重 |
+| `LEGADO_UNSUPPORTED_DYNAMIC_REQUEST` | `S26` | `test_validate_legado_import_rejects_dynamic_request_patterns` | 9 个补齐错误码之一 |
+| `LEGADO_UNSUPPORTED_FIELD` | `S9` | `test_validate_legado_import_unknown_display_like_field_is_hard_error`; `test_validate_legado_import_unknown_field_returns_precise_location` | 覆盖严格未知字段与精确路径 |
+| `LEGADO_INVALID_URL` | `S27` | `test_validate_legado_import_rejects_invalid_base_url` | 9 个补齐错误码之一 |
+| `LEGADO_REQUIRED_FIELD_MISSING` | `S28` | `test_validate_legado_import_rejects_missing_required_stage_definition` | 9 个补齐错误码之一 |
+| `LEGADO_MAPPING_FAILED` | `S29` | `test_validate_legado_import_rejects_invalid_stage_shape` | 9 个补齐错误码之一 |
+| `LEGADO_IGNORED_FIELD` | `S3`, `S12`, `S16`, `S17` | `test_validate_legado_import_warns_and_ignores_display_fields`; `test_validate_legado_import_warns_and_ignores_source_level_metadata_fields`; `test_validate_legado_import_warns_and_ignores_search_stage_metadata_fields`; `test_validate_legado_import_warns_and_ignores_detail_stage_metadata_fields` | 覆盖 source/search/detail 的 warning + ignore |
+| `LEGADO_CSS_HTML_NORMALIZED` | `S11` | `test_validate_legado_import_supports_common_aliases_and_css_jsoup_forms` | 覆盖 `selector@html` 受控归一化 |
+
+---
+
+## 12. 反向索引：测试函数 -> 样本 -> 错误码 / 能力
+
+| 测试函数 | 对应样本 | 对应错误码 / 能力 | 备注 |
+| --- | --- | --- | --- |
+| `test_validate_legado_import_accepts_supported_whitelist_source` | `S1` | 基础 success 基线 / 静态白名单导入 | validate 主基线 |
+| `test_import_legado_source_persists_online_source` | `S1` | import 成功并落库 | import 主基线 |
+| `test_validate_legado_import_rejects_js` | `S4` | `LEGADO_UNSUPPORTED_JS` | reject 基线 |
+| `test_validate_legado_import_rejects_cookie_and_login_state` | `S5` | `LEGADO_UNSUPPORTED_COOKIE`、`LEGADO_UNSUPPORTED_LOGIN_STATE` | reject 基线 |
+| `test_validate_legado_import_rejects_authorization_header` | `S21` | `LEGADO_UNSUPPORTED_AUTHORIZATION` | 9 个补齐错误码之一；覆盖去重 |
+| `test_validate_legado_import_rejects_webview_and_proxy` | `S6` | `LEGADO_UNSUPPORTED_WEBVIEW`、`LEGADO_UNSUPPORTED_PROXY` | reject 基线 |
+| `test_validate_legado_import_rejects_charset_override` | `S7` | `LEGADO_UNSUPPORTED_CHARSET_OVERRIDE` | reject 基线 |
+| `test_validate_legado_import_rejects_dynamic_variable_fields` | `S22` | `LEGADO_UNSUPPORTED_DYNAMIC_VARIABLE` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_condition_dsl` | `S23` | `LEGADO_UNSUPPORTED_CONDITION_DSL` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_unsupported_method` | `S24` | `LEGADO_UNSUPPORTED_METHOD` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_multi_request_structures` | `S25` | `LEGADO_UNSUPPORTED_MULTI_REQUEST` | 9 个补齐错误码之一；覆盖去重 |
+| `test_validate_legado_import_rejects_dynamic_request_patterns` | `S26` | `LEGADO_UNSUPPORTED_DYNAMIC_REQUEST` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_invalid_base_url` | `S27` | `LEGADO_INVALID_URL` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_missing_required_stage_definition` | `S28` | `LEGADO_REQUIRED_FIELD_MISSING` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_invalid_stage_shape` | `S29` | `LEGADO_MAPPING_FAILED` | 9 个补齐错误码之一 |
+| `test_validate_legado_import_rejects_unknown_placeholder` | `S10` | `LEGADO_UNSUPPORTED_PLACEHOLDER` | reject 基线 |
+| `test_validate_legado_import_warns_and_ignores_display_fields` | `S3` | `LEGADO_IGNORED_FIELD` / source 展示字段忽略 | warning 基线 |
+| `test_validate_legado_import_warns_and_ignores_source_level_metadata_fields` | `S12` | `LEGADO_IGNORED_FIELD` / source 元信息忽略 | warning 基线 |
+| `test_validate_legado_import_unknown_display_like_field_is_hard_error` | `S9` | `LEGADO_UNSUPPORTED_FIELD` | 冻结 ignore 边界 |
+| `test_validate_legado_import_supports_common_aliases_and_css_jsoup_forms` | `S2`, `S11` | alias / parser 归一化；`LEGADO_CSS_HTML_NORMALIZED` | alias + warning 核心回归 |
+| `test_validate_legado_import_accepts_absolute_search_url` | `S13` | 绝对 URL 成功路径 | success 增量基线 |
+| `test_validate_legado_import_exposes_detail_url_bridge_placeholder` | `S18` | `{{detail_url}}` bridge | bridge 基线 |
+| `test_validate_legado_import_exposes_catalog_url_bridge_placeholder` | `S19` | `{{catalog_url}}` bridge | bridge 基线 |
+| `test_validate_legado_import_exposes_chapter_url_bridge_placeholder` | `S20` | `{{chapter_url}}` bridge | bridge 基线 |
+| `test_validate_legado_import_rejects_replace_dsl` | `S8` | `LEGADO_UNSUPPORTED_REPLACE_DSL` | reject 基线 |
+| `test_validate_legado_import_rejects_unsupported_parser_prefix` | `S14` | `LEGADO_UNSUPPORTED_PARSER` | parser reject 基线 |
+| `test_validate_legado_import_rejects_complex_html_dsl` | `S15` | `LEGADO_UNSUPPORTED_PARSER` | complex HTML DSL reject 基线 |
+| `test_validate_legado_import_unknown_field_returns_precise_location` | `S9` | `LEGADO_UNSUPPORTED_FIELD` / precise location | issue 定位基线 |
+| `test_validate_legado_import_warns_and_ignores_search_stage_metadata_fields` | `S16` | `LEGADO_IGNORED_FIELD` / search 阶段忽略 | warning 基线 |
+| `test_validate_legado_import_warns_and_ignores_detail_stage_metadata_fields` | `S17` | `LEGADO_IGNORED_FIELD` / detail 阶段忽略 | warning 基线 |
+| `test_imported_legado_source_can_run_existing_discovery_search` | `S1` | importer -> discovery search 正式回归 | 成功样本正式回归 |
+| `test_imported_alias_source_can_run_existing_discovery_search` | `S2` | alias 样本 importer -> discovery search 回归 | alias 成功路径回归 |
+| `test_imported_legado_source_can_run_detail_catalog_and_chapter_chain` | `S1` | importer -> `detail -> catalog -> chapter` 正式回归 | 验收闭环核心测试 |
+
+---
+
+## 13. 归一化行为索引
 
 | 归一化行为 | 样本 ID | 回归测试 | 结果 |
 | --- | --- | --- | --- |
@@ -281,18 +349,18 @@ Phase 2 当前**仍不包含**：
 
 ---
 
-## 12. 维护约定
+## 14. 维护约定
 
-1. If a new sample is added, update:
+1. 若新增样本，必须同步更新：
    - [Legado Import 样本矩阵（Phase 2）](./LEGADO_IMPORT_SAMPLE_MATRIX.md)
-   - this traceability index
+   - 本 Traceability 索引
    - `test_legado_import_api.py`
-2. If a new error or warning code is added, update:
+2. 若新增错误码或 warning 码，必须同步更新：
    - [Legado Import 错误码（Phase 2）](./LEGADO_IMPORT_ERROR_CODES.md)
-   - this traceability index
-   - affected sample entries
-3. If a field gains support, update:
+   - 本 Traceability 索引
+   - 受影响的样本条目
+3. 若某个字段新增支持，必须同步更新：
    - [Legado 字段映射规范（Phase 2）](./LEGADO_FIELD_MAPPING_PHASE2.md)
-   - this traceability index
-   - the covering sample/test
-4. Do not silently upgrade Phase 2 into runtime compatibility.
+   - 本 Traceability 索引
+   - 对应覆盖样本与测试
+4. 不允许在当前文档中把 Phase 2 模糊扩展为运行时高兼容层。

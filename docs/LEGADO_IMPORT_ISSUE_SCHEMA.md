@@ -160,11 +160,36 @@
   - `S21` -> `test_validate_legado_import_rejects_authorization_header`
   - `S25` -> `test_validate_legado_import_rejects_multi_request_structures`
 
-## 5. 样本 -> issue 结构示例
+## 5. 输出稳定性约定
+
+### 5.1 排序稳定性
+
+- 当前 Phase 2 文档推荐 `errors[]` 与 `warnings[]` 尽量保持稳定输出顺序，以减少 diff 噪声，便于前端展示、自动化测试与 AI 分析。
+- 推荐排序口径：先按 `source_path`，再按 `error_code`；若两者相同，再按最小必要的实现内顺序输出。
+- 当前文档**不把全局强排序定义为已验收保证**。调用方不应把数组自然顺序当作业务语义，自动化测试应优先断言 `error_code`、`source_path`、`stage`、`field_name` 等稳定字段。
+
+### 5.2 摘要稳定性
+
+- `raw_value` 与 `normalized_value` 仅用于帮助定位与解释问题，属于**摘要信息**，不是原始输入或 canonical 结果的全量镜像。
+- 对超长字符串，文档推荐只保留足以定位问题的前缀、关键片段或最小必要摘要；不要求完整回传整段正文或大块规则文本。
+- 对对象 / 数组，文档推荐返回最小必要摘要，例如关键键、关键片段或归一化后的最小结构；不要求保留原始顺序、全部子字段或深层嵌套细节。
+- 调用方不应依赖 `raw_value` / `normalized_value` 的完整结构做强匹配；自动化测试与前端逻辑应优先依赖 `error_code`、`source_path`、`stage` 与必要的局部摘要。
+
+### 5.3 去重稳定性
+
+- 同一个 `error_code + source_path` 的 issue 不应重复输出。
+- 对已经明确判定为 forbidden 的顶层字段，不应继续递归污染出额外无关错误。
+- 若多个校验分支都命中同一问题，应保留最具代表性、最易定位的那一条 issue。
+- 当前 Phase 2 的文档口径是：issue 输出应尽量保持**稳定、最小、可定位**。相关基线可参考：
+  - `S21` -> `test_validate_legado_import_rejects_authorization_header`
+  - `S25` -> `test_validate_legado_import_rejects_multi_request_structures`
+  - [LEGADO_PHASE2_STATUS.md](./LEGADO_PHASE2_STATUS.md) 中 duplicate issue 已修正说明
+
+## 6. 样本 -> issue 结构示例
 
 以下示例只使用当前仓库中已经存在的真实样本、真实错误码和真实测试函数。
 
-### 5.1 warning 示例：ignored field
+### 6.1 warning 示例：ignored field
 
 - 样本：
   - `S3`
@@ -196,7 +221,7 @@
 }
 ```
 
-### 5.2 warning 示例：`selector@html` 归一化
+### 6.2 warning 示例：`selector@html` 归一化
 
 - 样本：
   - `S11`
@@ -225,7 +250,7 @@
 }
 ```
 
-### 5.3 warning 示例：alias 归一化
+### 6.3 warning 示例：alias 归一化
 
 当前**无独立 issue 示例**。
 
@@ -238,7 +263,7 @@
   - `test_validate_legado_import_supports_common_aliases_and_css_jsoup_forms`
   - `test_validate_legado_import_accepts_absolute_search_url`
 
-### 5.4 reject 示例：JS
+### 6.4 reject 示例：JS
 
 - 样本：
   - `S4`
@@ -264,7 +289,7 @@
 }
 ```
 
-### 5.5 reject 示例：Cookie
+### 6.5 reject 示例：Cookie
 
 - 样本：
   - `S5`
@@ -290,7 +315,7 @@
 }
 ```
 
-### 5.6 reject 示例：webView
+### 6.6 reject 示例：webView
 
 - 样本：
   - `S6`
@@ -316,7 +341,7 @@
 }
 ```
 
-### 5.7 reject 示例：charset override
+### 6.7 reject 示例：charset override
 
 - 样本：
   - `S7`
@@ -342,7 +367,7 @@
 }
 ```
 
-### 5.8 reject 示例：unsupported parser
+### 6.8 reject 示例：unsupported parser
 
 - 样本：
   - `S14`
@@ -387,7 +412,7 @@
 }
 ```
 
-### 5.9 bridge / normalization 相关说明
+### 6.9 bridge / normalization 相关说明
 
 当前 bridge placeholder 已有真实独立样本，但**没有直接 issue 示例**。
 
@@ -401,7 +426,7 @@
 - `S19` -> `test_validate_legado_import_exposes_catalog_url_bridge_placeholder`
 - `S20` -> `test_validate_legado_import_exposes_chapter_url_bridge_placeholder`
 
-### 5.10 reject 示例：Authorization header
+### 6.10 reject 示例：Authorization header
 
 - 样本：
   - `S21`
@@ -427,7 +452,7 @@
 }
 ```
 
-## 6. 向后兼容约定
+## 7. 向后兼容约定
 
 - 老调用方仍可继续只读取：
   - `code`
@@ -442,7 +467,7 @@
   - `raw_value`
   - `normalized_value`
 
-## 7. 维护约定
+## 8. 维护约定
 
 1. 若新增 issue 字段，必须同步更新本文档
 2. 若新增错误码，必须同步更新：

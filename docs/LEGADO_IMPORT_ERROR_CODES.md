@@ -19,6 +19,17 @@
 - [Legado Import Traceability 索引（Phase 2）](./LEGADO_IMPORT_TRACEABILITY_INDEX.md)
 - [Legado Import Issue Schema（Phase 2）](./LEGADO_IMPORT_ISSUE_SCHEMA.md)
 
+## 错误码总数校验说明
+
+- 当前 Phase 2 基线总数：`21`
+- 该总数应在以下载体之间保持一致：
+  - 实现定义：`backend/app/schemas/legado_import.py`
+  - 本文档
+  - [LEGADO_IMPORT_SAMPLE_MATRIX.md](./LEGADO_IMPORT_SAMPLE_MATRIX.md)
+  - [LEGADO_IMPORT_TRACEABILITY_INDEX.md](./LEGADO_IMPORT_TRACEABILITY_INDEX.md)
+  - `backend/tests/test_legado_import_api.py`
+- 为避免维护过程中出现多处统计漂移，本文档只固定总数 `21`，不在此处分拆 error 与 warning 的数量统计；具体语义以错误码表与 Issue Schema 为准。
+
 ## 错误码表
 
 | 错误码 | 含义 | 触发条件 | 是否 hard error | 建议处理方式 |

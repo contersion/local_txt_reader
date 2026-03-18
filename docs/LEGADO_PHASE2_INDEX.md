@@ -12,6 +12,32 @@
 - [LEGADO_PHASE2_STATUS.md](./LEGADO_PHASE2_STATUS.md)
 - [LEGADO_PHASE2_ACCEPTANCE.md](./LEGADO_PHASE2_ACCEPTANCE.md)
 
+## 冻结基线
+
+当前 Phase 2 文档按以下基线冻结维护：
+
+- 文档基线日期：`2026-03-18`
+- 阶段结论：`Phase 2 完成`
+- 当前定位：`Legado 静态 importer 第一阶段`
+- 测试基线：`50 passed`
+- 样本基线：`S1-S29`
+- 错误码基线：`21 个错误/警告码`
+
+当前阶段仅允许以下维护性增量继续落在 Phase 2 范围内：
+
+- 小范围静态 alias 增量
+- 小范围静态字段增量
+- 文档、测试、样本维护
+
+以下能力不得混入当前冻结范围；如需推进，必须单独进入后续阶段讨论：
+
+- JS
+- Cookie / 登录态
+- WebView
+- 高兼容运行时
+
+除上述维护性增量外，当前 Phase 2 应视为已冻结的静态 importer 文档基线，不再在本阶段内扩展新的运行时能力。
+
 ## 1. 当前阶段定位
 
 当前 Phase 2 的目标不是“高兼容 Legado 运行时”，而是：

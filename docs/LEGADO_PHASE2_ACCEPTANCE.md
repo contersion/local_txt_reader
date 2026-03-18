@@ -81,6 +81,13 @@ backend\.venv\Scripts\python.exe -m pytest backend/tests/test_legado_import_api.
 - `catalog` 成功
 - `chapter` 成功
 
+### 3.5 验收环境摘要
+
+- 验收日期：`2026-03-17`
+- 执行命令与测试结果：见 `3.3 自动化验证`
+- 当前仓库本地可确认的工具版本：`Python 3.13.3`、`pytest 8.4.2`
+- 当前文档未单独固化验收当日更多环境差异信息；后续复验应以仓库内容、执行命令与测试结果为准。
+
 ## 4. 本轮收尾完成项
 
 - 补齐 9 个错误码的样例矩阵

@@ -26,8 +26,8 @@ backend/data/
 backend/uploads/
 build/
 
-# Project-local AI memory
-.claude/engram/
+# Project-local AI config / memory
+.claude/
 
 # Local cache
 .uv-cache/
