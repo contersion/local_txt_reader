@@ -29,17 +29,22 @@
 在当前轮次之后，仓库已额外完成：
 
 - `Phase 3-B.2`：最小 preflight 实装
+- `Phase 3-B.3`：generic response_guard 最小分类实装
+- `Phase 3-B.4`：response_guard 扩展前决策轮（文档/决策层）
 
 但该实现仍然严格限定在：
 
 - L2 request descriptor / runtime schema
 - 发请求前的静态校验
 - 3 个最小错误码分类
+- L3 中最保守的 generic response classification：
+  - timeout
+  - HTTP 429
 
 并且仍然 **不等于**：
 
-- response guard 实装
-- anti-bot detector 实装
+- detector / anti-bot 实装
+- suspicious HTML / challenge / gateway detection
 - JS / WebView / browser fallback 实装
 
 ## 2. 当前仓库请求执行链扫描结论
@@ -401,7 +406,7 @@
 - `LEGADO_UNSUPPORTED_REQUEST_BODY_MODE`
 - `LEGADO_INVALID_HEADER_TEMPLATE`
 - `LEGADO_UNSUPPORTED_SIGNATURE_FLOW`
-- `LEGADO_REQUEST_RUNTIME_TIMEOUT`
+- `LEGADO_REQUEST_TIMEOUT`
 - `LEGADO_RATE_LIMITED`
 
 以下仍保留为文档预留，不进入首批代码：
@@ -561,3 +566,357 @@
 - 不改 DB
 - 不改前端
 - 不改 `fetch_service` 的传输职责
+
+## 14. 3-B.3 已落地的最小 generic response_guard 范围
+
+当前仓库已经额外落地的 3-B.3 范围仅包括：
+
+- `response_guard_service` 的最小 helper
+- `fetch_service` 中的单点 post-response / transport exception 分类接入
+- 2 个 generic response 错误码：
+  - `LEGADO_REQUEST_TIMEOUT`
+  - `LEGADO_RATE_LIMITED`
+
+### 14.1 当前已落地什么
+
+- transport timeout 现在会被稳定映射为：
+  - `LEGADO_REQUEST_TIMEOUT`
+- HTTP 429 现在会被稳定映射为：
+  - `LEGADO_RATE_LIMITED`
+- 正常 2xx 响应不会触发本轮新增分类
+- 非 429 的其他 HTTP 错误仍保持原 generic error 路径
+
+### 14.2 当前没有落地什么
+
+- retry / backoff / rate limit 执行策略
+- suspicious HTML 检测
+- challenge 检测
+- gateway / WAF 检测
+- browser required / js required 检测
+- anti-bot detector
+
+### 14.3 为什么这仍然只是 generic response classification
+
+本轮分类只依赖：
+
+- `httpx.TimeoutException`
+- `response.status_code == 429`
+
+本轮没有依赖：
+
+- 响应 HTML 内容语义
+- 站点指纹
+- 反爬页面特征
+- challenge 页面结构
+
+因此这仍然只是 generic response_guard 的最小分类，不属于 detector。
+
+## 15. 3-B.4 决策轮结论
+
+本轮只处理一个问题：
+
+> 在 timeout / HTTP 429 之外，response_guard 是否还应该继续吸收新的 generic classification？
+
+### 15.1 `empty response` 的当前结论
+
+当前结论：**暂不纳入 generic response_guard**
+
+原因：
+
+- 在当前项目里，“空响应”很容易与 stage 语义混在一起：
+  - search 可能是“无结果”
+  - detail/catalog/content 可能是 parser required-field 问题
+  - content 为空也可能是站点内容本身为空、缺章、占位页、或正文抽取失败
+- 仅凭“body 为空”并不能稳定回答：
+  - 这是 transport/generic 问题
+  - 还是 parser/input semantics 问题
+- 误伤风险偏高
+- 当前没有足够仓库证据支持稳定单测矩阵
+
+因此它更适合作为：
+
+- parser / content_parse / site semantics 问题
+
+而不是当前 response_guard 的下一步实现目标。
+
+### 15.2 `content-type mismatch / unacceptable response metadata` 的当前结论
+
+当前结论：**只保留极窄候选，不进入下一轮默认实装**
+
+原因：
+
+- 它比 empty response 更接近 generic HTTP metadata 问题
+- 但在现有项目中仍然存在明显耦合风险：
+  - expected response type 来自 stage definition
+  - 某些站点会返回非标准 content-type
+  - HTML 预期路径比 JSON 预期路径更容易误判
+- 当前 `fetch_service` 已经有通用文本错误：
+  - `Response type mismatch: expected ...`
+- 若现在直接把它升级成稳定错误码，很容易把 parser/stage 语义问题过早写死
+
+因此当前只接受以下文档层判断：
+
+- 若未来真的继续扩 response_guard，content-type mismatch 只能在**极窄条件**下再讨论：
+  - 明确期望 `json`
+  - 响应明确声明非 JSON content-type
+  - 且不会与 detector/站点语义混淆
+
+本轮不进入实现。
+
+### 15.3 `response_guard` 与 `anti_bot_detector` 的边界补钉
+
+本轮进一步固定边界：
+
+- `response_guard` 只负责：
+  - transport exception
+  - HTTP status 层稳定分类
+  - 极少量、明确可复现的 response metadata 问题
+- 一旦分类需要依赖以下任一内容，就已经不属于 response_guard：
+  - response body 文本语义
+  - HTML 内容扫描
+  - DOM/结构分析
+  - suspicious page phrase / challenge wording
+  - gateway/WAF 特征
+  - browser/js-required 推断
+
+换句话说：
+
+- 看 status / exception / 明确 metadata -> 仍可能是 response_guard
+- 看 body meaning / page semantics / site fingerprints -> 已经是 detector
+
+### 15.4 下一轮最小任务建议
+
+当前推荐下一轮不是继续扩 response_guard，而是：
+
+- 进入 **detector 设计轮**
+
+原因：
+
+- response_guard 的 generic 空间目前已基本收紧到：
+  - timeout
+  - HTTP 429
+- empty response 证据不足
+- content-type mismatch 只有很窄的候选空间，还不足以值得优先实现
+- 若继续硬扩 response_guard，更容易踩进 detector 边界
+
+因此当前最合理的下一步是：
+
+- **不再继续扩 response_guard 实装**
+- 先做 detector 边界设计轮
+
+## 16. 3-B.5 detector / anti-bot 边界设计轮结论
+
+### 16.1 当前仓库基线
+
+当前仓库已经能稳定证明：
+
+- `response_guard_service.py` 当前只分类：
+  - `httpx.TimeoutException`
+  - HTTP `429`
+- `fetch_service.py` 当前仍只负责：
+  - transport 执行
+  - response size limit
+  - response type mismatch 校验
+  - generic response guard hook
+- `source_engine.py` 当前已经天然位于：
+  - `fetch_stage_response(...)`
+  - `parse_*_preview(...)`
+  之间
+- 当前仍然 **没有** detector service
+- 当前仍然 **没有** suspicious HTML / challenge / gateway / browser-required / js-required 的响应后分类代码
+
+因此，当前仓库已经足够支撑 detector 边界设计，但还不足以直接进入 detector 实装。
+
+### 16.2 detector 的问题范围
+
+detector 只应用于以下这类响应后问题：
+
+- 分类已经不能只看 status / exception / metadata
+- 必须读取 response body meaning
+- 必须读取 HTML semantics
+- 必须识别 challenge wording / challenge markers
+- 必须识别 gateway / WAF interception fingerprints
+- 必须识别 browser-required / js-required 的 body-level hints
+
+detector 当前 **不** 应负责：
+
+- transport timeout
+- HTTP 429
+- generic `4xx/5xx`
+- 纯 metadata 问题
+- 仍然高度依赖 parser/stage/site semantics 的 empty response 争议
+
+当前 detector 的允许职责固定为：
+
+- classification only
+- signal labeling only
+- stable error mapping only
+- stop-execution only
+
+当前 detector 的明确非职责仍然是：
+
+- anti-bot bypass
+- 自动 retry / backoff / fallback
+- cookie refresh orchestration
+- JS 执行
+- browser / WebView 执行
+
+### 16.3 `response_guard` 与 detector 的代码边界
+
+基于当前代码链路，未来顺序应固定为：
+
+1. `preflight`
+2. `fetch`
+3. `response_guard`
+4. `detector`
+5. `parser / content_parse`
+
+这样划分的原因是：
+
+- `response_guard` 必须留在 `fetch_service.py` 附近，因为它需要看到 transport exception 与稳定 HTTP 信号
+- detector 不应继续塞进 `fetch_service.py`，否则传输层会开始承担 body semantics 逻辑
+- detector 应在 `fetch_stage_response(...)` 返回 `RawFetchResponse` 之后接入
+- detector 应在 `parse_*_preview(...)` 消费正文语义之前接入
+- 因此 detector 的未来最小接缝更适合放在：
+  - `source_engine.py`
+  - 或一个非常薄的 future coordinator
+
+未来 detector 的输入契约应优先固定为：
+
+- `RawFetchResponse`
+- 小范围 stage context
+  - 如 stage name / expected response type / requested URL
+
+未来 detector 的长期输入契约 **不** 应直接绑定为：
+
+- 原始 `httpx.Response`
+- router payload
+- importer schema
+
+未来 detector 的输出契约应是：
+
+- structured classification result
+- 或由该结果映射出的稳定 runtime error
+
+未来 detector 的输出契约 **不** 应包含：
+
+- retry instruction
+- bypass instruction
+- browser execution plan
+- recovery strategy
+
+### 16.4 第一批 detector 候选能力
+
+本轮固定的 detector 候选集合为：
+
+- suspicious HTML candidate
+- anti-bot challenge candidate
+- gateway / WAF interception candidate
+- browser-required candidate signal
+- js-required candidate signal
+
+但它们当前的状态并不相同：
+
+- suspicious HTML
+  - `documented_only`
+  - 不是下一轮默认实装目标
+  - 原因：heuristic 空间太宽，最容易与正常 HTML 或 parser 失败混淆
+- anti-bot challenge
+  - future `candidate_for_first_implementation`
+  - 仅限 classification
+  - 不等于 challenge solving
+- gateway / WAF interception
+  - future `candidate_for_first_implementation`
+  - 仅限 classification
+  - 不等于 bypass
+- browser-required
+  - 当前只在 detector 边界层建模
+  - runtime support 仍然 `deferred to 3-D`
+- js-required
+  - 当前只在 detector 边界层建模
+  - runtime support 仍然 `deferred to 3-C`
+
+### 16.5 为什么 suspicious HTML 继续更保守
+
+与 challenge / gateway 相比，suspicious HTML 仍然最容易把 generic heuristic、parser semantics 与 site-specific semantics 混在一起。
+
+当前仓库还不足以稳定定义：
+
+- 一个低误伤的 suspicious HTML 规则集
+- 一个不混入站点私货的测试矩阵
+- 一个稳定区分以下情况的最小边界：
+  - 正常 HTML 内容页
+  - parser 输入异常
+  - anti-bot challenge page
+  - generic unexpected HTML
+
+所以 3-B.5 的最保守结论仍是：
+
+- 继续保留 suspicious HTML 文档建模
+- 但不把它升级成下一轮默认实装目标
+
+### 16.6 为什么 browser-required / js-required 仍然继续 deferred
+
+即便未来 detector 可以识别出 body-level browser/js-required signals，也不代表仓库已经准备好把这些分类升级成“可支持的运行时能力”。
+
+当前仓库仍然缺少：
+
+- JS sandbox execution
+- browser / WebView fallback
+- 相关路径的资源隔离与恢复策略
+
+因此 3-B.5 保持执行侧状态不变：
+
+- `LEGADO_JS_EXECUTION_REQUIRED` -> `deferred to 3-C`
+- `LEGADO_BROWSER_STATE_REQUIRED` -> `deferred to 3-D`
+
+这样可以避免把“信号可建模”误写成“能力已支持”。
+
+### 16.7 Step 1 / Step 2 判断
+
+#### Step 1：本轮只做文档与决策是否已经足够
+
+结论：**足够**
+
+原因：
+
+- 当前仓库已经有足够证据固定 detector 的问题范围
+- 当前仓库已经有足够证据固定 `response_guard` / detector 的调用顺序与接缝
+- 当前仓库已经有足够证据固定 detector 候选能力与错误码状态分层
+- 当前仓库已经有足够证据把下一轮收敛到更小的 detector skeleton 决策任务
+
+#### Step 2：当前是否存在“必须落代码”的充分证明
+
+结论：**不存在**
+
+当前还没有证据能证明：
+
+- 只做文档会阻塞下一轮
+- detector skeleton 已经小到可以安全直接落代码
+- 在 detector 输入/输出契约还未固定前，加代码空壳会比边界决策本身更有价值
+
+因此 3-B.5 默认停在文档层。
+
+### 16.8 下一轮最小任务
+
+当前最小、最稳妥的下一步应是：
+
+- **Phase 3-B.6：detector 最小静态分类骨架决策轮**
+
+而不是：
+
+- 直接进入 detector 实装
+- 直接实现 suspicious HTML
+- 直接实现 challenge / gateway
+- 直接实现 browser-required / js-required
+
+3-B.6 只应继续固定：
+
+- detector 输入契约
+- detector 输出契约
+- first-batch sample matrix
+- challenge / gateway 候选 heuristic 的最小边界
+
+当前阶段口径必须保持为：
+
+> Phase 3-B.5 仅完成 detector / anti-bot 边界设计，仓库尚未进入 detector 实装，尚未进入 anti-bot bypass，尚未进入 3-C / 3-D。

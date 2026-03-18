@@ -5,10 +5,14 @@ from urllib.parse import urlparse
 import httpx
 
 from app.core.config import settings
+from app.schemas.online_runtime import LegadoRuntimeCode
+from app.services.online.response_guard_service import classify_generic_response_issue, classify_transport_exception
 
 
 class FetchServiceError(ValueError):
-    pass
+    def __init__(self, message: str, *, code: LegadoRuntimeCode | None = None):
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +53,9 @@ def fetch_stage_response(
             follow_redirects=settings.online_follow_redirects,
         )
     except httpx.TimeoutException as exc:
+        issue = classify_transport_exception(exc, url=url)
+        if issue is not None:
+            raise FetchServiceError(issue.message, code=issue.code) from exc
         raise FetchServiceError(f"Request timeout while fetching {url}") from exc
     except httpx.InvalidURL as exc:
         raise FetchServiceError(f"Invalid runtime URL: {url}") from exc
@@ -60,6 +67,10 @@ def fetch_stage_response(
         raise FetchServiceError(
             f"Response too large: {response_size} bytes exceeds limit {settings.online_response_size_limit_bytes}"
         )
+
+    issue = classify_generic_response_issue(response, url=url)
+    if issue is not None:
+        raise FetchServiceError(issue.message, code=issue.code)
 
     if response.status_code >= 400:
         raise FetchServiceError(f"Remote request failed with status {response.status_code} for {url}")

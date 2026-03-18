@@ -11,6 +11,9 @@
 - `Phase 3-A.1`
 - `Phase 3-B.1`
 - `Phase 3-B.2`
+- `Phase 3-B.3`
+- `Phase 3-B.4`
+- `Phase 3-B.5`
 
 ## 阶段拆分
 
@@ -305,6 +308,173 @@
 - detector / anti-bot / response_guard 实装
 - 3-C
 - 3-D
+
+### Phase 3-B.3：generic response_guard 最小分类实装
+
+#### 目标
+
+- 在 3-B.2 的基础上，只增加最小 generic response classification
+- 当前只覆盖：
+  - transport timeout
+  - HTTP 429
+- 保持旧成功路径完全不变
+
+#### 已落地范围
+
+- `response_guard_service` 最小 helper
+- `fetch_service` 单点 response_guard hook
+- 2 个错误码：
+  - `LEGADO_REQUEST_TIMEOUT`
+  - `LEGADO_RATE_LIMITED`
+
+#### 明确不做什么
+
+- 不做 suspicious HTML 检测
+- 不做 challenge / gateway / anti-bot detection
+- 不做 retry / backoff / rate limit 执行策略
+- 不做自动恢复 / fallback / 降级
+- 不做 JS / browser runtime 判断
+
+#### 为什么这一步安全
+
+- timeout 与 429 都是纯 transport / 纯 HTTP 层信号
+- 分类落点仍然局限在 `fetch_service` 附近
+- 不依赖响应内容语义
+- 不会把 transport 层升级成 anti-bot detector
+
+#### 验收标准
+
+- timeout 被稳定映射到 `LEGADO_REQUEST_TIMEOUT`
+- 429 被稳定映射到 `LEGADO_RATE_LIMITED`
+- 正常 2xx 响应不误触发
+- preflight、runtime skeleton、discovery、online books、online sources、importer 回归继续通过
+
+#### 当前结论
+
+当前仓库已经完成：
+
+> `Phase 3-B.3` generic response_guard 最小分类实装
+
+但仍然没有进入：
+
+- detector / anti-bot 实装
+- suspicious HTML / challenge / gateway detection
+- retry/backoff/rate-limit 执行策略
+- 3-C
+- 3-D
+
+### Phase 3-B.4：response_guard 扩展前决策轮
+
+#### 目标
+
+- 判断 response_guard 是否还值得继续吸收新的 generic classification
+- 判断哪些候选一旦再往前一步就会越界到 detector
+- 为下一轮最小任务收敛边界
+
+#### 默认策略
+
+- 默认只做文档、Traceability、错误码分层与测试规划
+- 默认不落代码
+
+#### 本轮重点问题
+
+- `empty response` 是否能稳定 generic 化
+- `content-type mismatch / unacceptable response metadata` 是否值得继续进入 response_guard
+- `response_guard` 与 `anti_bot_detector` 的文档边界是否还需要补钉
+- 下一轮最小任务到底应不应该继续扩 response_guard
+
+#### 当前结论
+
+- `empty response`
+  - 当前证据不足，**暂不进入 response_guard**
+- `content-type mismatch`
+  - 仅保留为**极窄候选**
+  - 当前**不进入下一轮默认实装**
+- 当前继续扩 response_guard 的收益已经很小
+- 下一轮更合理的方向应是：
+  - **detector 设计轮**
+  - 而不是继续扩 response_guard 实装
+
+#### 为什么本轮默认不落代码
+
+- 当前仓库已经有足够证据做出上述判断
+- 再写代码不会比文档决策提供更多必要信息
+- 若硬把 empty response / content-type mismatch 拉进实现，最容易直接越界到 detector
+
+### Phase 3-B.5：detector / anti-bot 边界设计轮
+#### 目标
+
+- 固定 detector 的问题范围，只覆盖响应后、且必须读取 body meaning / HTML semantics / challenge markers / gateway fingerprints / browser-js-required signals 的分类问题
+- 固定 detector 与 `response_guard` 的调用顺序、输入输出边界与目录职责，防止 `response_guard` 继续膨胀成 detector
+- 固定第一批 detector 候选能力与错误码状态，明确哪些只是 documented only，哪些才是 future candidate，哪些必须继续 deferred 到 3-C / 3-D
+- 为下一轮最小任务收敛到 detector skeleton 的“实现前决策”，而不是直接进入 detector 代码
+
+#### 默认策略
+
+- 默认只做文档、Traceability、错误码分层与测试规划
+- 默认不落代码
+
+#### 本轮固定结论
+
+- `response_guard` 当前只覆盖：
+  - transport timeout
+  - HTTP 429
+  - 极少量稳定、纯 HTTP / metadata 级别的问题
+- 任何需要读取以下内容的分类，都不再属于 `response_guard`：
+  - response body meaning
+  - HTML semantics
+  - challenge wording
+  - gateway / WAF fingerprints
+  - browser-required / js-required body-level signals
+- detector 当前只允许被设计为：
+  - classification only
+  - stop-execution only
+  - no bypass
+  - no recovery orchestration
+- 第一批 detector 文档候选固定为：
+  - suspicious HTML candidate
+  - anti-bot challenge candidate
+  - gateway / WAF interception candidate
+  - browser-required candidate signal
+  - js-required candidate signal
+- 其中状态分层固定为：
+  - `LEGADO_SUSPICIOUS_HTML_RESPONSE`：`documented_only`
+  - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`：`candidate_for_first_implementation`
+  - `LEGADO_ANTI_BOT_CHALLENGE`：`candidate_for_first_implementation`
+  - `LEGADO_JS_EXECUTION_REQUIRED`：`deferred to 3-C`
+  - `LEGADO_BROWSER_STATE_REQUIRED`：`deferred to 3-D`
+
+#### 为什么本轮仍不进入 detector 实装
+
+- 当前仓库还没有 detector 的最小输入/输出契约
+- 当前仓库还没有 detector 的最小测试样本矩阵
+- 当前仓库虽然已经有 `RawFetchResponse`，但还没有固定“在哪一层读取 body meaning”这件事的单点接缝
+- 现在直接落 detector 代码，最容易把 heuristic、parser semantics、anti-bot 口径和 future recovery 语义混写在一起
+
+#### 推荐的调用顺序
+
+- `preflight`
+- `fetch`
+- `response_guard`
+- `detector`
+- `parser / content_parse`
+
+#### 下一轮最小任务建议
+
+- 不直接进入 detector 实装
+- 优先进入：
+  - **Phase 3-B.6：detector 最小静态分类骨架决策轮**
+- 下一轮只应固定：
+  - detector 输入契约
+  - detector 输出契约
+  - first-batch detector 样本矩阵
+  - challenge / gateway 的最小 generic heuristic 边界
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.5` 已完成 detector / anti-bot 边界设计，仓库仍未进入 detector / anti-bot 实装，仍未进入 3-C / 3-D。
 
 ### Phase 3-C：受限 JS 沙箱
 

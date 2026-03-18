@@ -54,7 +54,21 @@
 | request body mode enum 与挂载层 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | header template 挂载层 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | signature placeholder 边界 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
-| response_guard 分层 | 3-B.1 | decision-fixed | not implemented | 未正式支持 | 未暴露 | `response_guard_service` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | timeout / rate limit 规划测试 |
+| generic response_guard 分层 | 3-B.3 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/response_guard_service.py`, `backend/app/services/online/fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_response_guard.py` |
+| timeout classification | 3-B.3 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/response_guard_service.py`, `backend/app/services/online/fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_response_guard.py` |
+| HTTP 429 classification | 3-B.3 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/response_guard_service.py`, `backend/app/services/online/fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_response_guard.py` |
+| empty response classification | 3-B.4 | decision-fixed | not implemented | 暂缓 | 未暴露 | 待定 | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 仅测试规划，当前不进入实现 |
+| content-type mismatch classification | 3-B.4 | decision-fixed | not implemented | 候选（极窄） | 未暴露 | 待定 | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | 仅测试规划，当前不进入实现 |
+| response_guard / anti_bot_detector 边界补钉 | 3-B.4 | decision-fixed | not implemented | 文档已固定 | 未暴露 | `response_guard_service` / `anti_bot_detector` 边界 | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 设计轮，无代码测试 |
+| 下一轮最小任务占位 | 3-B.4 | decision-fixed | not implemented | 推荐转 detector 设计轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 待下一轮 |
+| detector 问题范围定义 | 3-B.5 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | detector 设计轮测试规划 |
+| detector 输入/输出契约边界 | 3-B.5 | decision-fixed | not implemented | 文档已固定 | 未暴露 | `source_engine.py` future hook / future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | detector skeleton 测试规划 |
+| suspicious HTML candidate | 3-B.5 | decision-fixed | not implemented | documented only | 未暴露 | future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | heuristic 测试规划，仅文档建模 |
+| challenge page candidate | 3-B.5 | decision-fixed | not implemented | candidate | 未暴露 | future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | future detector 静态分类测试规划 |
+| gateway / WAF interception candidate | 3-B.5 | decision-fixed | not implemented | candidate | 未暴露 | future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | future detector 静态分类测试规划 |
+| browser-required candidate signal | 3-B.5 | decision-fixed | not implemented | deferred to 3-D | 未暴露 | future `anti_bot_detector`, `browser_fallback_service` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | deferred |
+| js-required candidate signal | 3-B.5 | decision-fixed | not implemented | deferred to 3-C | 未暴露 | future `anti_bot_detector`, `js_execution_sandbox` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | deferred |
+| 下一轮最小 detector 任务占位 | 3-B.5 | decision-fixed | not implemented | 推荐转 3-B.6 detector skeleton 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
 | anti_bot_detector 分层 | 3-B.1 | decision-fixed | not implemented | 未正式支持 | 未暴露 | `anti_bot_detector` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | gateway / challenge / suspicious HTML 规划测试 |
 | 第一批 3-B 错误码选择 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | 复杂请求 / 基础反爬 | 3-B | 已设计 | 未实现 | 未正式支持 | 未暴露 | `anti_bot_handler` 预留 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 未实现 |
@@ -68,7 +82,8 @@
 | L0 | 普通 HTTP GET/POST | 已正式支持 | 复用 `fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 复用现有 online discovery / online books 回归 |
 | L1 | Session / Cookie / Header 注入 skeleton | skeleton only | 复用 `request_profile_service.py` / `session_handler.py` | `LEGADO_PHASE3_ARCHITECTURE.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | `backend/tests/test_online_session_runtime.py` |
 | L2 | body mode / request description / 参数装配 | implemented (minimal preflight only) | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
-| L3 | timeout / retry / rate limit / suspicious HTML / challenge 检测 | decision-fixed / not implemented | `response_guard_service`, `anti_bot_detector` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | timeout / rate limited 首批测试；gateway/challenge/suspicious HTML 后续规划 |
+| L3-G | generic response_guard | implemented (timeout/429 only) | `backend/app/services/online/response_guard_service.py`, `backend/app/services/online/fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_response_guard.py` |
+| L3-D | detector / anti-bot classification | decision-fixed / not implemented | future `anti_bot_detector` via `source_engine.py` seam | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | challenge/gateway/browser/js-required detector 测试规划 |
 | L4 | JS 依赖能力 | deferred to 3-C | `js_execution_sandbox` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 | L5 | 浏览器态 / WebView | deferred to 3-D | `browser_fallback_service` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 
@@ -92,7 +107,7 @@
 | request body mode | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` | implemented / partial validation / still preflight-only |
 | header template | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` | implemented / partial validation / static-only |
 | signature placeholder | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` | implemented / partial validation / classification-only |
-| response_guard | `response_guard_service` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | timeout / rate limit 规划测试 | decision-fixed / not implemented |
+| response_guard | `backend/app/services/online/response_guard_service.py`, `backend/app/services/online/fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_response_guard.py` | implemented / partial validation / generic timeout-429 only |
 | anti_bot_detector | `anti_bot_detector` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | suspicious HTML / gateway / challenge 规划测试 | decision-fixed / not implemented |
 | first-batch 3-B error codes | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` | partially implemented |
 
@@ -113,7 +128,12 @@
 | header template | implemented / static validation only |
 | signature placeholder | implemented / classification only |
 | request profile 增强 | skeleton only |
-| response guard | decision-fixed / not implemented |
+| response guard | implemented / generic timeout-429 only |
+| empty response classification | on hold / not implemented |
+| content-type mismatch classification | narrow candidate / not implemented |
+| detector scope | decision-fixed / not implemented |
+| challenge / gateway detector candidates | candidate / not implemented |
+| suspicious HTML detector candidate | documented only / not implemented |
 | anti-bot detection | decision-fixed / not implemented |
 | anti-bot bypass | not formally supported |
 | JS runtime | deferred to 3-C |
@@ -129,15 +149,51 @@
 
 ## 本轮验收关联
 
-当前 3-B.2 最小 preflight 实装的最小验收链为：
+当前 3-B.3 最小 generic response_guard 实装的最小验收链为：
 
-1. `RequestBodyMode` / `RequestRuntimeDescriptor` 已存在
-2. header template preflight 已存在
-3. signature placeholder preflight 已存在
-4. 3 个错误码已进入实现：
-   - `LEGADO_UNSUPPORTED_REQUEST_BODY_MODE`
-   - `LEGADO_INVALID_HEADER_TEMPLATE`
-   - `LEGADO_UNSUPPORTED_SIGNATURE_FLOW`
-5. `backend/tests/test_online_request_preflight.py` 已覆盖最小 preflight 场景
-6. 旧 runtime skeleton / discovery / online books / online sources / importer 回归继续通过
-7. `response_guard / anti_bot_detector / 3-C / 3-D` 仍未进入实现
+1. `response_guard_service` 已存在
+2. timeout classification 已存在
+3. HTTP 429 classification 已存在
+4. 2 个错误码已进入实现：
+   - `LEGADO_REQUEST_TIMEOUT`
+   - `LEGADO_RATE_LIMITED`
+5. `backend/tests/test_online_response_guard.py` 已覆盖最小 generic classification 场景
+6. 3-B.2 preflight、runtime skeleton、discovery、online books、online sources、importer 回归继续通过
+7. `anti_bot_detector / suspicious HTML / challenge / 3-C / 3-D` 仍未进入实现
+
+当前 3-B.4 决策轮的最小验收链为：
+
+1. response_guard 当前边界已被重新核查
+2. empty response 已明确为：
+   - 暂缓
+   - not implemented
+3. content-type mismatch 已明确为：
+   - 极窄候选
+   - 当前不进入实现
+4. response_guard / anti_bot_detector 的文档边界已再次固定
+5. 下一轮最小任务已明确收敛为：
+   - 优先进入 detector 设计轮
+6. 本轮修改范围仅限文档，不触碰运行时代码路径
+
+当前 3-B.5 detector / anti-bot 边界设计轮的最小验收链为：
+
+1. `response_guard` 的已实现范围仍明确只到：
+   - timeout
+   - HTTP 429
+2. detector 的问题范围已固定为：
+   - body meaning / HTML semantics / challenge / gateway / browser-js-required hints
+3. detector 的职责已固定为：
+   - classification only
+   - no bypass
+   - no recovery orchestration
+4. detector 的未来接缝已固定为：
+   - `fetch_stage_response(...)` 之后
+   - `parse_*_preview(...)` 之前
+5. detector 候选能力状态已固定为：
+   - challenge / gateway -> candidate
+   - suspicious HTML -> documented only
+   - js-required -> deferred to 3-C
+   - browser-required -> deferred to 3-D
+6. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.6` detector skeleton 决策轮
+7. 本轮仍然只修改文档，不触碰运行时代码路径

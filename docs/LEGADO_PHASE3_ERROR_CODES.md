@@ -63,7 +63,7 @@
 
 ### 3.2 Phase 3-B 请求描述与运行时分类层
 
-以下错误码按 3-B.1 决策轮，分为三类：
+以下错误码按 3-B.1 与 3-B.5 决策结果，分为三类：
 
 - `candidate_for_first_implementation`
   - 下一轮最小实装可优先落地
@@ -77,11 +77,11 @@
 | `LEGADO_REQUEST_PROFILE_INVALID` | request profile 配置错误 | documented_only | 文档建模，未入代码枚举 | 3-B | 作为 umbrella 语义保留，不建议首批直接落代码 |
 | `LEGADO_UNSUPPORTED_REQUEST_BODY_MODE` | 不支持的 request body mode | implemented | 已进入 `online_runtime.py` 与 `request_profile_service.py` | 3-B.2 | 当前用于拒绝未激活 mode 与非法 mode |
 | `LEGADO_INVALID_HEADER_TEMPLATE` | 非法 header template | implemented | 已进入 `online_runtime.py` 与 `request_profile_service.py` | 3-B.2 | 当前只做静态结构/模板合法性校验 |
-| `LEGADO_REQUEST_RUNTIME_TIMEOUT` | request runtime timeout | candidate_for_first_implementation | 当前只有无错误码的通用 timeout 文本 | 3-B | 纯 HTTP / mock 超时即可稳定测试 |
+| `LEGADO_REQUEST_TIMEOUT` | request timeout | implemented | 已进入 `response_guard_service.py` 与 `fetch_service.py` | 3-B.3 | 纯 transport timeout 分类，不涉及 detector |
 | `LEGADO_REQUEST_RETRY_EXHAUSTED` | retry 已耗尽 | documented_only | 未实现 | 3-B | 当前仓库没有 retry 机制，不应先落空壳错误码 |
-| `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` | 被 anti-bot gateway 阻断 | documented_only | 文档建模，未入代码枚举 | 3-B | detector 规则尚未冻结，不建议首批进入代码 |
-| `LEGADO_ANTI_BOT_CHALLENGE` | 触发反爬挑战 | documented_only | 已在代码枚举中预留，但未激活 | 3-B | challenge detector 尚未实现，不建议首批激活 |
-| `LEGADO_SUSPICIOUS_HTML_RESPONSE` | 检测到可疑 HTML 响应 | documented_only | 文档建模，未入代码枚举 | 3-B | detector 规则尚未冻结，不建议首批进入代码 |
+| `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` | 被 anti-bot gateway 阻断 | candidate_for_first_implementation | 文档建模，未入代码枚举 | 3-B.5 | 可进入 future detector skeleton 候选，但只允许 classification，不允许 bypass |
+| `LEGADO_ANTI_BOT_CHALLENGE` | 触发反爬挑战 | candidate_for_first_implementation | 已在代码枚举中预留，但未激活 | 3-B.5 | 可进入 future detector skeleton 候选，但只允许 classification，不允许 challenge solving |
+| `LEGADO_SUSPICIOUS_HTML_RESPONSE` | 检测到可疑 HTML 响应 | documented_only | 文档建模，未入代码枚举 | 3-B.5 | heuristic 空间仍过宽，当前只保留文档建模 |
 | `LEGADO_UNSUPPORTED_SIGNATURE_FLOW` | 不支持的签名流程 | implemented | 已进入 `online_runtime.py` 与 `request_profile_service.py` | 3-B.2 | 当前只做占位识别与拒绝分类，不做求值 |
 
 ### 3.3 运行环境层
@@ -95,11 +95,13 @@
 
 | 错误码 | 含义 | 生命周期状态 | 公共路径状态 | 说明 |
 | --- | --- | --- | --- | --- |
-| `LEGADO_RATE_LIMITED` | 触发限流 | candidate_for_first_implementation | not_activated | 未来识别到 429 或稳定限流信号时使用 |
+| `LEGADO_RATE_LIMITED` | 触发限流 | implemented | 已进入 `response_guard_service.py` 与 `fetch_service.py` | 3-B.3 | 当前只对 HTTP 429 做 generic classification |
 
 ## 4. 当前实现范围
 
-本轮只允许以下错误码进入最小骨架实现：
+### 4.0 Phase 3-A / 3-A.1 已实现错误码
+
+当前已在 runtime skeleton 中实现的前置校验错误码为：
 
 - `LEGADO_SESSION_MISSING`
 - `LEGADO_SESSION_EXPIRED`
@@ -116,7 +118,24 @@
 
 - “进入骨架实现”不等于“当前公共 API 已激活”
 - 按当前仓库证据，这三个错误码只在内部 runtime 组装代码路径存在
-- Phase 3-B 新增的 request runtime / anti-bot classification 错误码当前仍停留在文档设计阶段
+- 只有最小 L2 preflight 与最小 generic response classification 进入了实现；detector / anti-bot 相关错误码仍停留在文档设计阶段
+
+### 4.0.1 Phase 3-B.2 / 3-B.3 已实现错误码
+
+当前已在 3-B 最小实现中进入代码的错误码为：
+
+- `LEGADO_UNSUPPORTED_REQUEST_BODY_MODE`
+- `LEGADO_INVALID_HEADER_TEMPLATE`
+- `LEGADO_UNSUPPORTED_SIGNATURE_FLOW`
+- `LEGADO_REQUEST_TIMEOUT`
+- `LEGADO_RATE_LIMITED`
+
+其中：
+
+- 前 3 个属于 L2 preflight
+- 后 2 个属于最小 generic response classification
+
+它们当前都只服务于内部 runtime 路径，不表示公共产品路径已正式支持复杂请求运行时。
 
 ## 4.1 3-B 首批错误码入代码标准
 
@@ -136,9 +155,9 @@
 - `LEGADO_INVALID_HEADER_TEMPLATE`
 - `LEGADO_UNSUPPORTED_SIGNATURE_FLOW`
 
-以下 2 个仍保留为首批候选，但当前尚未进入代码：
+本轮额外进入实现的 2 个 generic response 错误码：
 
-- `LEGADO_REQUEST_RUNTIME_TIMEOUT`
+- `LEGADO_REQUEST_TIMEOUT`
 - `LEGADO_RATE_LIMITED`
 
 原因：
@@ -167,6 +186,54 @@
 - header template 已可求值
 - signature flow 已被支持
 
+## 4.4 3-B.4 候选但未实现的 response_guard 扩展项
+
+本轮决策后，以下两类能力的状态固定为：
+
+| 候选项 | 当前状态 | 是否进入代码 | 说明 |
+| --- | --- | --- | --- |
+| empty response classification | deferred / on hold | 否 | 当前缺少稳定 generic 定义，误伤风险过高 |
+| content-type mismatch classification | candidate (narrow only) | 否 | 仅在极窄条件下可能成立，当前不进入默认实装 |
+
+重要约束：
+
+- 以上两项都 **不是 implemented**
+- 当前也 **不应** 被表述为“response_guard 已支持”
+- detector / suspicious HTML / challenge / gateway detection 仍未开始
+
+## 4.5 3-B.5 detector 候选错误码分层
+
+本轮在 detector / anti-bot 边界设计中，进一步固定以下分层：
+
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - 当前状态：`candidate_for_first_implementation`
+  - 含义：仅限 future detector classification
+  - 当前 **不** 表示：
+    - gateway bypass 已支持
+    - 自动恢复执行已支持
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - 当前状态：`candidate_for_first_implementation`
+  - 含义：仅限 future detector classification
+  - 当前 **不** 表示：
+    - challenge solving 已支持
+    - 浏览器兜底已支持
+- `LEGADO_SUSPICIOUS_HTML_RESPONSE`
+  - 当前状态：`documented_only`
+  - 原因：heuristic 仍然过宽，最容易和 parser/stage/site semantics 混淆
+- `LEGADO_JS_EXECUTION_REQUIRED`
+  - 当前状态保持：`deferred`
+  - 阶段归属：`3-C`
+- `LEGADO_BROWSER_STATE_REQUIRED`
+  - 当前状态保持：`deferred`
+  - 阶段归属：`3-D`
+
+重要约束：
+
+- 上述状态变化只表示 detector 边界已固定
+- 不表示 detector 已进入实现
+- 不表示 anti-bot 绕过已支持
+- 不表示 JS / browser runtime 已支持
+
 ## 5. 当前不实现但必须预留的错误码
 
 以下错误码当前保留为 `documented_only`，不进入当前代码：
@@ -178,8 +245,6 @@
 - `LEGADO_UNSUPPORTED_ADVANCED_AUTH`
 - `LEGADO_REQUEST_PROFILE_INVALID`
 - `LEGADO_REQUEST_RETRY_EXHAUSTED`
-- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
-- `LEGADO_ANTI_BOT_CHALLENGE`
 - `LEGADO_SUSPICIOUS_HTML_RESPONSE`
 
 以下错误码当前为 `deferred`：
@@ -226,14 +291,15 @@ Phase 3 错误码负责未来运行时阶段的动态错误，例如：
   - `LEGADO_UNSUPPORTED_REQUEST_BODY_MODE`
   - `LEGADO_INVALID_HEADER_TEMPLATE`
   - `LEGADO_UNSUPPORTED_SIGNATURE_FLOW`
-- 当前仍属于首批候选，但尚未进入代码：
-  - `LEGADO_REQUEST_RUNTIME_TIMEOUT`
+- 已进入当前 3-B.3 最小 generic response_guard 实装：
+  - `LEGADO_REQUEST_TIMEOUT`
   - `LEGADO_RATE_LIMITED`
+- 已进入当前 3-B.5 detector future candidate 分层：
+  - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `LEGADO_ANTI_BOT_CHALLENGE`
 - 当前只保留文档，不建议首批进入代码
   - `LEGADO_REQUEST_PROFILE_INVALID`
   - `LEGADO_REQUEST_RETRY_EXHAUSTED`
-  - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
-  - `LEGADO_ANTI_BOT_CHALLENGE`
   - `LEGADO_SUSPICIOUS_HTML_RESPONSE`
 - 明确后置
   - `LEGADO_JS_EXECUTION_REQUIRED`
