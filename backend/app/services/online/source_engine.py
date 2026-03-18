@@ -9,6 +9,7 @@ from app.schemas.online_discovery import (
     OnlineDiscoveryCatalogResponse,
     OnlineDiscoverySearchResponse,
 )
+from app.schemas.online_runtime import OnlineAuthConfig, SessionContext
 from app.services.online.content_parse_service import (
     ContentParseError,
     parse_catalog_preview,
@@ -19,6 +20,7 @@ from app.services.online.content_parse_service import (
 from app.services.online.fetch_service import FetchServiceError, fetch_stage_response
 from app.services.online.online_sources import get_online_source
 from app.services.online.parser_engine import ParserEngineError
+from app.services.online.request_profile_service import RequestProfileError, build_request_profile
 
 
 class OnlineDiscoveryError(ValueError):
@@ -35,7 +37,12 @@ def preview_search(
     *,
     keyword: str,
     page: int,
+    auth_config: OnlineAuthConfig | None = None,
+    session_context: SessionContext | None = None,
 ) -> OnlineDiscoverySearchResponse:
+    # ``auth_config`` / ``session_context`` are internal runtime hooks for the
+    # Phase 3 skeleton. Current routers keep using the default path without
+    # passing them, so existing preview APIs remain backward compatible.
     source = get_online_source(db, user_id, source_id)
     definition = _load_definition(source.definition_json)
     stage_definition = definition["search"]
@@ -46,14 +53,14 @@ def preview_search(
             stage_definition=stage_definition,
             placeholders={"keyword": keyword, "page": str(page)},
         )
-        raw_response = _execute_stage(stage_request)
+        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
         return parse_search_preview(
             source_id=source.id,
             source_name=source.name,
             raw_response=raw_response,
             stage_definition=stage_definition,
         )
-    except (FetchServiceError, ParserEngineError, ContentParseError) as exc:
+    except (FetchServiceError, ParserEngineError, ContentParseError, RequestProfileError) as exc:
         raise OnlineDiscoveryError(str(exc)) from exc
 
 
@@ -64,6 +71,8 @@ def preview_detail(
     *,
     detail_url: str,
     remote_book_id: str | None,
+    auth_config: OnlineAuthConfig | None = None,
+    session_context: SessionContext | None = None,
 ) -> LibraryBookDetailPreview:
     source = get_online_source(db, user_id, source_id)
     definition = _load_definition(source.definition_json)
@@ -75,7 +84,7 @@ def preview_detail(
             stage_definition=stage_definition,
             placeholders={"detail_url": detail_url},
         )
-        raw_response = _execute_stage(stage_request)
+        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
         return parse_detail_preview(
             source_id=source.id,
             source_name=source.name,
@@ -84,7 +93,7 @@ def preview_detail(
             detail_url=detail_url,
             remote_book_id=remote_book_id,
         )
-    except (FetchServiceError, ParserEngineError, ContentParseError) as exc:
+    except (FetchServiceError, ParserEngineError, ContentParseError, RequestProfileError) as exc:
         raise OnlineDiscoveryError(str(exc)) from exc
 
 
@@ -94,6 +103,8 @@ def preview_catalog(
     source_id: int,
     *,
     catalog_url: str,
+    auth_config: OnlineAuthConfig | None = None,
+    session_context: SessionContext | None = None,
 ) -> OnlineDiscoveryCatalogResponse:
     source = get_online_source(db, user_id, source_id)
     definition = _load_definition(source.definition_json)
@@ -105,12 +116,12 @@ def preview_catalog(
             stage_definition=stage_definition,
             placeholders={"catalog_url": catalog_url},
         )
-        raw_response = _execute_stage(stage_request)
+        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
         return parse_catalog_preview(
             raw_response=raw_response,
             stage_definition=stage_definition,
         )
-    except (FetchServiceError, ParserEngineError, ContentParseError) as exc:
+    except (FetchServiceError, ParserEngineError, ContentParseError, RequestProfileError) as exc:
         raise OnlineDiscoveryError(str(exc)) from exc
 
 
@@ -122,6 +133,8 @@ def preview_chapter(
     chapter_url: str,
     chapter_index: int,
     chapter_title: str | None,
+    auth_config: OnlineAuthConfig | None = None,
+    session_context: SessionContext | None = None,
 ) -> ChapterContentPreview:
     source = get_online_source(db, user_id, source_id)
     definition = _load_definition(source.definition_json)
@@ -133,7 +146,7 @@ def preview_chapter(
             stage_definition=stage_definition,
             placeholders={"chapter_url": chapter_url},
         )
-        raw_response = _execute_stage(stage_request)
+        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
         return parse_chapter_preview(
             raw_response=raw_response,
             stage_definition=stage_definition,
@@ -141,7 +154,7 @@ def preview_chapter(
             chapter_index=chapter_index,
             chapter_title=chapter_title,
         )
-    except (FetchServiceError, ParserEngineError, ContentParseError) as exc:
+    except (FetchServiceError, ParserEngineError, ContentParseError, RequestProfileError) as exc:
         raise OnlineDiscoveryError(str(exc)) from exc
 
 
@@ -171,14 +184,27 @@ def _build_stage_request(
     }
 
 
-def _execute_stage(stage_request: dict[str, Any]):
+def _execute_stage(
+    stage_request: dict[str, Any],
+    *,
+    auth_config: OnlineAuthConfig | None = None,
+    session_context: SessionContext | None = None,
+):
+    # Optional runtime injection is assembled here so the public router/API
+    # surface can remain unchanged while Phase 3 is still only a skeleton.
+    request_profile = build_request_profile(
+        stage_request=stage_request,
+        auth_config=auth_config,
+        session_context=session_context,
+    )
     return fetch_stage_response(
-        method=stage_request["method"],
-        url=stage_request["url"],
-        response_type=stage_request["response_type"],
-        headers=stage_request.get("headers"),
-        query=stage_request.get("query"),
-        body=stage_request.get("body"),
+        method=request_profile.method,
+        url=request_profile.url,
+        response_type=request_profile.response_type,
+        headers=request_profile.headers,
+        query=request_profile.query,
+        body=request_profile.body,
+        cookies=request_profile.cookies,
     )
 
 

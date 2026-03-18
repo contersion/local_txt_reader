@@ -29,7 +29,11 @@ def fetch_stage_response(
     headers: dict[str, str] | None = None,
     query: dict[str, str] | None = None,
     body: dict[str, str] | None = None,
+    cookies: dict[str, str] | None = None,
 ) -> RawFetchResponse:
+    # Phase 3-A.1 keeps cookies as an optional runtime hook only.
+    # This function does not own login orchestration, cookie refresh, or
+    # persistence; it simply executes the final request profile it receives.
     _validate_runtime_url(url)
     request_headers = _merge_request_headers(headers)
 
@@ -40,6 +44,7 @@ def fetch_stage_response(
             headers=request_headers,
             params=query or None,
             data=body or None,
+            cookies=cookies or None,
             timeout=settings.online_request_timeout_seconds,
             follow_redirects=settings.online_follow_redirects,
         )
