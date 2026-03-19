@@ -1,0 +1,73 @@
+[
+  {
+    "sample_id": "success-challenge-candidate",
+    "payload": {
+      "stage": "search",
+      "expected_response_type": "html",
+      "requested_url": "https://example.com/search?q=test",
+      "fetch_outcome_kind": "success",
+      "final_url": "https://example.com/search?q=test",
+      "status_code": 200,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": false,
+      "body_text_preview": "<html><body>Checking your browser before accessing the site. Enable JavaScript and cookies to continue.<div class=\"result-item\"><a class=\"title\" href=\"/books/1\">Book</a></div></body></html>",
+      "body_text_length": 184
+    },
+    "expected_adapter_outcome": "detector_result_attached",
+    "expected_detector_category": "challenge_candidate",
+    "expected_detector_status": "candidate_match",
+    "expected_recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE"
+  },
+  {
+    "sample_id": "success-no-match",
+    "payload": {
+      "stage": "search",
+      "expected_response_type": "html",
+      "requested_url": "https://example.com/search?q=test",
+      "fetch_outcome_kind": "success",
+      "final_url": "https://example.com/search?q=test",
+      "status_code": 200,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": false,
+      "body_text_preview": "<html><body><div class=\"result-item\"><a class=\"title\" href=\"/books/1\">Book</a></div></body></html>",
+      "body_text_length": 100
+    },
+    "expected_adapter_outcome": "detector_result_attached",
+    "expected_detector_category": "no_match",
+    "expected_detector_status": "no_match",
+    "expected_recommended_error_code": null
+  },
+  {
+    "sample_id": "error-gateway-candidate",
+    "payload": {
+      "stage": "detail",
+      "expected_response_type": "html",
+      "requested_url": "https://example.com/books/1",
+      "fetch_outcome_kind": "http_error",
+      "final_url": "https://example.com/blocked",
+      "status_code": 403,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": true,
+      "body_text_preview": "<html><body>Access denied. Request blocked by security rules from the web application firewall.</body></html>",
+      "body_text_length": 108
+    },
+    "expected_adapter_outcome": "detector_result_attached",
+    "expected_detector_category": "gateway_candidate",
+    "expected_detector_status": "candidate_match",
+    "expected_recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY"
+  },
+  {
+    "sample_id": "error-timeout-noop",
+    "payload": {
+      "stage": "content",
+      "expected_response_type": "html",
+      "requested_url": "https://example.com/books/1/ch1",
+      "fetch_outcome_kind": "transport_error",
+      "exception_kind": "timeout"
+    },
+    "expected_adapter_outcome": "noop",
+    "expected_detector_category": null,
+    "expected_detector_status": null,
+    "expected_recommended_error_code": null
+  }
+]

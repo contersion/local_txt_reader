@@ -6,7 +6,7 @@
 
 当前最新轮次进一步固定为：
 
-- `Phase 3-B.8`：detector live 接缝决策轮
+- `Phase 3-B.17`：detector runtime-visible gating 决策轮
 - 默认结论：只做决策、文档、Traceability、错误码分层与测试规划
 - 默认不改代码
 
@@ -20,9 +20,9 @@
 
 当前默认结论：
 
-> 本轮停留在设计层已经足够推进项目，不需要进入 Phase 3-B 实装。
+> 本轮停留在设计层已经足够推进项目，不需要进入 detector runtime-visible gating 实装。
 
-本轮四个关键决策的完整方案比较，统一记录于：
+当前轮次关键决策的完整方案比较，统一记录于：
 
 - `docs/LEGADO_PHASE3B_DECISIONS.md`
 
@@ -34,6 +34,11 @@
 - `Phase 3-B.5`：detector / anti-bot 边界设计轮（文档/决策层）
 - `Phase 3-B.6`：detector 最小静态分类骨架决策轮（文档/决策层）
 - `Phase 3-B.7`：detector 最小静态分类骨架实现（纯内部、纯离线）
+- `Phase 3-B.8`：detector live 接缝决策轮（文档/决策层）
+- `Phase 3-B.9`：detector live seam skeleton 决策轮（文档/决策层）
+- `Phase 3-B.10`：detector live seam skeleton 最小内部结构实装（纯内部、纯非 live）
+- `Phase 3-B.11`：detector live seam adapter 接入前决策轮（文档/决策层）
+- `Phase 3-B.12`：detector live seam adapter 最小内部 skeleton 实装（纯内部、纯 no-op）
 
 但该实现仍然严格限定在：
 
@@ -1839,3 +1844,2768 @@ detector 当前 **不** 应负责：
 - 测试规划
 
 而不进入 live detector runtime 实装。
+
+## 20. 3-B.9 detector live seam skeleton 决策轮结论
+
+### 20.1 当前 live seam 仍缺什么
+
+在 3-B.8 之后，仓库已经知道：
+
+- future detector 不应直接塞进 `fetch_service.py`
+- future detector 接缝逻辑位于 `source_engine.py` 所在的 fetch -> parser seam
+- future detector 需要能看见一部分当前会被 `fetch_service.py` 早抛错吞掉的 `403/503` 候选页信息
+
+但当前仍然缺少真正能让下一轮 safely 起步的最小 contract：
+
+- `exception-to-summary` 的最小 contract
+- success / error 双路径 summary 的最小共享字段
+- `source_engine -> thin coordinator/adapter` 的最小调用边界
+- 不改 public 行为前提下的最小可接入点定义
+
+因此本轮最重要的不是写 live seam 代码，而是先把 seam skeleton contract 定死。
+
+### 20.2 决策 1：`exception-to-summary` 最小 contract
+
+#### 方案 A：success / error 完全统一成一个 `DetectionInputSummary`
+
+优点：
+
+- 类型表面最简单
+- 对 future detector 调用方看起来最统一
+
+缺点：
+
+- 当前 success path 与 error path 的可见性差异太大
+- 很容易被迫伪造：
+  - `final_url`
+  - `status_code`
+  - `content_type`
+  - `body_text_preview`
+- 一个大而全的 summary bag 很快会变得模糊
+
+风险：
+
+- 统一外形掩盖真实缺失数据
+- 后续测试会出现“字段有但并不可信”的问题
+
+#### 方案 B：success / error 各自独立 summary，但共享 base fields
+
+优点：
+
+- 最符合当前仓库真实信息边界
+- 能避免伪造不存在的数据
+- 可保留双路径差异，同时把共享 contract 压到最小
+- 最利于 future adapter 再做 detector-ready normalization
+
+缺点：
+
+- 类型数会比单一 summary 多一层
+- 下一轮需要明确 base / success / error 三者关系
+
+风险：
+
+- 若 base fields 设计过宽，仍可能演变成大 bag
+
+#### 方案 C：先只做 error summary，success path 以后再并
+
+优点：
+
+- 最直接回应当前 `403/503` / exception 问题
+- 初始范围最窄
+
+缺点：
+
+- success / error 双路径会在设计上失衡
+- 下一轮仍然要补 success path，容易返工
+
+风险：
+
+- seam skeleton 从第一步就变成偏 error-only，后续不利于统一维护
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+future `exception-to-summary` contract 应采用：
+
+- `FetchOutcomeSummaryBase`
+- `FetchSuccessSummary`
+- `FetchErrorSummary`
+
+其中最小共享字段推荐固定为：
+
+- `stage`
+- `expected_response_type`
+- `requested_url`
+- `fetch_outcome_kind`
+
+error / success 各自可选补充：
+
+- `final_url`
+- `status_code`
+- `content_type`
+- `redirected`
+- `body_text_preview`
+- `body_text_length`
+- `exception_kind`
+
+不推荐方案 A 的原因：
+
+- 当前仓库并不支持“单一 summary 且所有字段都有可信值”
+
+不推荐方案 C 的原因：
+
+- 3-B.9 的核心要求就是同时覆盖 dual-path，不应只做 error 半套
+
+### 20.3 决策 2：success path / error path 的最小字段集合
+
+#### 方案 A：字段尽量多，追求 future 一步到位
+
+优点：
+
+- 表面上 future 扩展余量最大
+
+缺点：
+
+- 与本轮“最小不可再小”原则冲突
+- 很容易提前引入：
+  - header bag
+  - full body
+  - parser hints
+  - site-specific metadata
+
+风险：
+
+- 误复杂化风险最高
+
+#### 方案 B：字段最小化，只保留当前确实必要字段
+
+优点：
+
+- 最符合 3-B.9 的目标
+- 样本和测试最容易维护
+- 最利于下一轮只做 summary/adapter schema 而不误入 live hook
+
+缺点：
+
+- 未来若新增 heuristic，需要后续小步补字段
+
+风险：
+
+- 需要明确哪些字段是 shared，哪些字段是 optional
+
+#### 方案 C：按 stage 分裂不同字段集
+
+优点：
+
+- 理论上最贴合 stage 语义
+
+缺点：
+
+- 现在就按 stage 裂开，会让 seam skeleton 过早变复杂
+- 不利于 summary fixture 与 contract 测试治理
+
+风险：
+
+- stage-specific 契约很容易提前膨胀成 parser-side contract
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+当前最小共享字段建议固定为：
+
+- `stage`
+- `expected_response_type`
+- `requested_url`
+- `fetch_outcome_kind`
+
+当前最小 optional 字段建议固定为：
+
+- `final_url`
+- `status_code`
+- `content_type`
+- `redirected`
+- `body_text_preview`
+- `body_text_length`
+- `exception_kind`
+
+当前必须禁止直接放入 summary 的内容：
+
+- 完整 `httpx.Response`
+- 完整 response headers
+- 完整 body
+- DOM / parser 结果
+- 任意 site-specific hints
+
+这样做的原因是：
+
+- success / error 两条路径可以共享一组最小 contract
+- 同时不强行伪造不存在的数据
+- future adapter 仍有空间把 summary 转成 detector-ready normalization
+
+### 20.4 决策 3：`source_engine -> thin coordinator/adapter` 的最小调用边界
+
+#### 方案 A：在 `source_engine.py` 内部直接内嵌最小 adapter 逻辑
+
+优点：
+
+- 改动点最直观
+- stage context 获取简单
+
+缺点：
+
+- 容易让 `source_engine.py` 继续变厚
+- fetch / response_guard / detector summary / detector dispatch 都可能开始在同一文件堆积
+
+风险：
+
+- `source_engine.py` 会慢慢长成大 orchestrator
+
+#### 方案 B：独立 thin adapter/coordinator，`source_engine.py` 只调用
+
+优点：
+
+- 最利于职责分离
+- 最容易独立回退
+- 能把下一轮继续限制在“summary/adapter schema”而不是 live hook
+
+缺点：
+
+- 需要多一个极薄的内部模块
+
+风险：
+
+- 如果边界没钉死，thin coordinator 也可能继续膨胀
+
+#### 方案 C：在 `fetch_service.py` 内加 seam adapter
+
+优点：
+
+- 最靠近 transport outcome
+
+缺点：
+
+- 会让 transport 层开始承担 stage-aware seam adapter 责任
+- 与 3-B.8 已固定边界冲突
+
+风险：
+
+- 污染 `fetch_service.py`
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+future thin coordinator/adapter 的最小职责应只包括：
+
+1. 调 fetch
+2. 调 response_guard
+3. 把 success / error outcome 裁剪成 summary
+4. 在满足最小证据时再进入 detector-ready normalization
+5. 决定结果是：
+   - 继续进入 parser
+   - 还是只在 future detector path 内部分类/上抛
+
+它当前 **不应** 负责：
+
+- retry / backoff / fallback
+- anti-bot bypass
+- parser semantics
+- site-specific orchestration
+- browser / JS runtime 决策
+
+与 `source_engine.py` 的边界应固定为：
+
+- `source_engine.py`
+  - 只保留 stage orchestration 和上下文准备
+- thin coordinator/adapter
+  - 只保留 fetch outcome -> summary -> detector seam 相关逻辑
+
+### 20.5 决策 4：detector live seam 的最小可接入点
+
+#### 方案 A：`source_engine.py` 内一个极小 helper 调用
+
+优点：
+
+- stage context 获取最直接
+
+缺点：
+
+- 仍然容易让 seam 逻辑继续长在 `source_engine.py` 本体里
+
+风险：
+
+- 随着下一轮推进会逐步演变成厚 orchestrator
+
+#### 方案 B：`source_engine.py` 邻接的 future thin adapter/coordinator seam
+
+优点：
+
+- 最符合 3-B.8 已固定方向
+- 最有利于保留 stage context
+- 不污染 transport
+- 不污染 parser
+- 最易独立回退
+
+缺点：
+
+- 需要下一轮继续把这个 seam skeleton 的内部结构定小
+
+风险：
+
+- 若没有继续强约束，仍可能长胖
+
+#### 方案 C：`fetch_service.py` seam
+
+优点：
+
+- 最接近 transport outcome
+
+缺点：
+
+- 与当前分层方向冲突
+- 既没有稳定 stage context，又会污染 transport
+
+风险：
+
+- 破坏 `fetch_service.py` 作为 leaf transport 的边界
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+原因：
+
+- 它最能同时满足：
+  - 保存 stage context
+  - 不污染 transport
+  - 不污染 parser
+  - 支持独立回退
+
+不推荐方案 A：
+
+- 因为 helper 仍然会长在 `source_engine.py` 本体里
+
+不推荐方案 C：
+
+- 因为 `fetch_service.py` 仍然不适合直接承担 detector seam adapter 责任
+
+### 20.6 决策 5：下一轮最小可执行任务
+
+#### 方案 A：继续只做 seam 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 3-B.8 与 3-B.9 已经把高层 seam 方向和最小 contract 基本钉清
+- 继续停在纯文档层，新增收益开始下降
+
+风险：
+
+- 容易重复决策，不再产生新的可执行收敛
+
+#### 方案 B：进入最小 live seam skeleton 实现
+
+优点：
+
+- 仍然不接 live hook
+- 仍然不改 `fetch_service.py` live 行为
+- 但能把下一轮推进到最小内部结构：
+  - summary schema
+  - base/success/error contract
+  - thin adapter/coordinator schema 占位
+
+缺点：
+
+- 需要非常严格限制范围
+
+风险：
+
+- 若实现范围失控，会误滑向 live seam runtime
+
+#### 方案 C：直接进入 detector live hook 最小骨架实装
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 当前仍缺：
+  - summary/adapter contract 的代码骨架
+  - dual-path fixture/test shape
+  - no-regression 保护
+
+风险：
+
+- 直接越界进入 live detector runtime
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮若推进，最小不可再小的集合应固定为：
+
+- `FetchOutcomeSummaryBase`
+- `FetchSuccessSummary`
+- `FetchErrorSummary`
+- future thin coordinator/adapter 的最小内部 schema / helper contract
+- 对应纯内部、纯单测的 dual-path fixture / contract tests
+
+下一轮仍然 **不允许**：
+
+- live hook
+- `fetch_service.py` 行为修改
+- `source_engine.py` live detector 接入
+- challenge/gateway live detection
+
+因此下一轮建议阶段名为：
+
+- **Phase 3-B.10：detector live seam skeleton 最小内部结构实装**
+
+### 20.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**
+
+原因：
+
+- 当前 success / error 双路径的最小 contract 已经可以在文档层固定
+- 当前 thin coordinator/adapter 的最小边界已经可以在文档层固定
+- 当前已经足够为下一轮的最小内部结构实装提供边界
+
+#### Step 2：如果主张本轮必须落代码，是否已有充分证明
+
+结论：**没有**
+
+当前仍然无法证明：
+
+- 不落代码会阻塞本轮
+- 需要落的代码已经小到不可再小
+- 新增结构不会构成 live detector runtime
+- 新增结构不会影响既有链路
+
+因此 3-B.9 仍应停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 live seam skeleton 代码实装。
+
+## 21. 3-B.10 detector live seam skeleton 最小内部结构实装结论
+
+### 21.1 当前已落地什么
+
+当前仓库已经以纯内部、纯非 live、纯可单测的方式落地了：
+
+- `FetchOutcomeSummaryBase`
+- `FetchSuccessSummary`
+- `FetchErrorSummary`
+- future thin coordinator/adapter 会依赖的最小 helper skeleton
+- dual-path fixtures
+- contract-level tests
+
+当前实际代码落点为：
+
+- `backend/app/schemas/online_live_seam.py`
+- `backend/app/services/online/live_seam_skeleton.py`
+- `backend/tests/fixtures/online_detector_live_seam_samples.json`
+- `backend/tests/test_online_detector_live_seam_contract.py`
+
+### 21.2 当前推荐的最小内部 contract
+
+当前 summary contract 继续固定为：
+
+- shared required fields:
+  - `stage`
+  - `expected_response_type`
+  - `requested_url`
+  - `fetch_outcome_kind`
+- optional fields:
+  - `final_url`
+  - `status_code`
+  - `content_type`
+  - `redirected`
+  - `body_text_preview`
+  - `body_text_length`
+  - `exception_kind`
+
+当前 success / error 双路径的关系继续固定为：
+
+- `FetchOutcomeSummaryBase`
+  - 只表达最小共享字段
+- `FetchSuccessSummary`
+  - 只表达 success path
+  - 不伪造 `exception_kind`
+- `FetchErrorSummary`
+  - 只表达 error path
+  - `http_error` 至少要求 `status_code`
+  - `transport_error` 至少要求 `exception_kind`
+
+### 21.3 当前 helper skeleton 的边界
+
+当前 helper 只允许做：
+
+- 内部 stub / fixture / plain mapping -> summary normalization
+- dual-path contract coercion
+
+当前 helper 明确 **不** 做：
+
+- live `httpx.Response` 提取
+- live exception 提取
+- detector 调度
+- detector 分类
+- runtime error surface 映射
+
+因此当前 helper 的正确口径是：
+
+- seam skeleton helper
+- not live adapter
+
+### 21.4 当前没有落地什么
+
+当前仍然 **没有** 落地：
+
+- exception-to-summary live adapter
+- detector live hook
+- `fetch_service.py` 中的 seam 接入
+- `source_engine.py` 中的 seam 接入
+- `response_guard_service.py` 中的 seam 接入
+- challenge/gateway live detection
+- browser/js-required live detection
+
+### 21.5 当前仍然不支持什么
+
+当前仍必须明确表述为 **不支持**：
+
+- detector live runtime
+- challenge / gateway 的线上 detector
+- suspicious HTML runtime detector
+- browser/js-required runtime detector
+- anti-bot bypass
+- JS / WebView / browser fallback
+
+### 21.6 为什么这仍然不等于 live runtime
+
+因为本轮新增结构只运行在：
+
+- 内部 schema
+- 内部 helper skeleton
+- fixtures
+- 单元测试
+
+它当前 **不**：
+
+- 消费 live fetch path
+- 消费 live source_engine path
+- 改变现有 router / importer / DB / frontend 行为
+- surface 任何 detector runtime error
+
+因此本轮正确口径必须是：
+
+> seam skeleton implemented internally, live detector still not connected
+
+### 21.7 下一步最小任务
+
+在 3-B.10 之后，最小的下一步建议应是：
+
+- **Phase 3-B.11：detector live seam adapter 接入前决策轮**
+
+该轮只应继续回答：
+
+- minimal internal summary/helper 如何映射到 future adapter/coordinator
+- 哪些 internal structures 已经足以支撑接入前决策
+- 哪些仍不能碰 live hook
+
+在这一步之前，仍不应直接进入：
+
+- live hook
+- `fetch_service.py` 行为修改
+- `source_engine.py` detector 接入
+- anti-bot bypass
+
+## 22. 3-B.11 detector live seam adapter 接入前决策轮结论
+
+### 22.1 当前 future adapter 还缺什么
+
+在 3-B.10 之后，仓库已经具备：
+
+- dual-path summary contract
+- 最小 contract helper skeleton
+- dual-path fixtures
+- contract tests
+
+这说明 future adapter 的输入侧 contract 已经不再停留在纯文档层。
+
+但当前 future adapter 仍然缺少以下关键冻结项：
+
+- 它到底负责什么、不负责什么
+- 它与 `source_engine.py`、`fetch_service.py`、`response_guard_service.py`、detector skeleton 的单向边界
+- 它的输出是：
+  - detector classification result
+  - 还是已经包含 runtime error surface 决策
+- 它在进入实现前，哪些门槛已经满足，哪些仍然明显未满足
+
+因此本轮最重要的仍然不是写 adapter，而是先钉 adapter responsibility boundary。
+
+### 22.2 决策 1：future adapter 的职责边界
+
+#### 方案 A：adapter 只做 summary/detector contract 衔接
+
+优点：
+
+- 单责最清晰
+- 最符合当前 3-B 的阶段目标
+- 最利于独立回退
+
+缺点：
+
+- 需要上层后续再决定 runtime error surface
+- 看起来推进较慢
+
+风险：
+
+- 若后续层次继续不清，调用方可能试图把别的职责再塞回来
+
+#### 方案 B：adapter 同时承担部分 runtime error surface 决策
+
+优点：
+
+- 后续看起来更接近“可上线”
+
+缺点：
+
+- 会提前把 classification 层和 runtime surface 层混在一起
+- 会让错误码升级时机失真
+
+风险：
+
+- 容易误导为 live detector 已接通
+
+#### 方案 C：adapter 承担更广的 orchestration 职责
+
+优点：
+
+- 表面上“一层做完很多事”
+
+缺点：
+
+- 会直接长成新的 orchestrator
+- 与 3-B 的最小接缝目标冲突
+
+风险：
+
+- 边界污染风险最高
+- 几乎不可控地滑向 retry/fallback/bypass 方向
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+future live seam adapter 最小职责只应包括：
+
+1. 接收 success/error 路径的内部 summary
+2. 做最小 detector-ready normalization
+3. 组装 detector input
+4. 调用 detector
+5. 返回 classification result 给上层
+
+它当前 **不应** 负责：
+
+- transport retry
+- response_guard 逻辑
+- parser/content_parse
+- runtime 错误 surface 最终决策
+- browser/js fallback
+- anti-bot bypass
+
+不推荐方案 B 的原因：
+
+- 会过早混入 runtime error surface 决策
+
+不推荐方案 C 的原因：
+
+- 会直接把 adapter 变成新 orchestrator
+
+### 22.3 决策 2：adapter 与现有层的最小边界
+
+#### 方案 A：adapter 只由 `source_engine.py` 调用
+
+优点：
+
+- stage context 最稳定
+- 最符合现有 fetch -> parser seam
+- 最利于保持单向依赖
+
+缺点：
+
+- 需要继续严格限制 adapter 本身不要膨胀
+
+风险：
+
+- 若未来边界不守住，`source_engine.py` 可能继续被拖厚
+
+#### 方案 B：adapter 直接嵌入 `fetch_service.py`
+
+优点：
+
+- 最靠近 transport outcome
+
+缺点：
+
+- `fetch_service.py` 没有稳定 stage context
+- 会污染 transport 叶子层
+
+风险：
+
+- 破坏 `fetch_service.py` 的 leaf transport 边界
+
+#### 方案 C：adapter 融入 `response_guard_service.py`
+
+优点：
+
+- 看起来靠近 response classification
+
+缺点：
+
+- `response_guard_service.py` 当前只应停在 generic classification
+- detector/stage-aware summary 逻辑与 response_guard 的职责不同
+
+风险：
+
+- `response_guard_service.py` 会膨胀成 adapter + detector 前置层
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+future adapter 与各层边界应固定为：
+
+- `fetch_service.py`
+  - 只输出 transport outcome
+  - 不反向依赖 adapter
+- `response_guard_service.py`
+  - 只输出 generic classification
+  - 不反向依赖 adapter
+- `source_engine.py`
+  - 只作为上层发起者调用 adapter
+  - 不把 adapter 逻辑内嵌到 fetch 或 parser 中
+- detector skeleton / future detector
+  - 只消费 adapter 交给它的 normalized detector input
+
+必须禁止的调用关系：
+
+- `fetch_service.py -> adapter`
+- `response_guard_service.py -> adapter`
+- `detector -> adapter`
+- `parser/content_parse -> adapter`
+
+### 22.4 决策 3：adapter 输入输出 contract 是否已经足够
+
+#### 方案 A：现有 contract 已足够，下一轮可进入最小 skeleton
+
+优点：
+
+- 与当前仓库证据最一致
+- 能让项目继续以最小步推进
+
+缺点：
+
+- 仍不表示 live 接入条件已经满足
+
+风险：
+
+- 若表述不准，容易被误读为“可以直接接 live”
+
+#### 方案 B：还需补少量 contract 字段/状态后再进入
+
+优点：
+
+- 更保守
+
+缺点：
+
+- 当前没有明显证据表明还缺关键字段
+- 容易重复 3-B.9 / 3-B.10 已完成的工作
+
+风险：
+
+- 文档轮重复，信息增量低
+
+#### 方案 C：当前 contract 仍不足，下一轮继续停在设计层
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 与当前仓库实际状态不符
+- 已有内部 schema/helper/fixtures/tests 说明 contract 层已不是纯概念
+
+风险：
+
+- 项目推进无效停滞
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+当前证据表明：
+
+- `FetchOutcomeSummaryBase / FetchSuccessSummary / FetchErrorSummary`
+  - 已足够作为 future adapter 输入基础
+- 当前 detector input/result contract
+  - 已足够承接 future adapter 输出侧的 classification-only contract
+
+当前仍然不足以支持的内容是：
+
+- adapter 到 runtime error surface 的关系
+- adapter 到 live wiring 的关系
+- adapter 进入 live path 之后的 no-regression 证明
+
+因此结论应是：
+
+- 当前 contract 已足够支持“最小 adapter skeleton”
+- 但还不足够支持“adapter live 接入”
+
+### 22.5 决策 4：错误码升级门槛与接入前门槛
+
+#### 方案 A：adapter skeleton 一落地就允许升级部分 detector 错误码
+
+优点：
+
+- 状态推进快
+
+缺点：
+
+- 会把 internal skeleton 误写成 live runtime 支持
+
+风险：
+
+- 阶段误导风险最高
+
+#### 方案 B：必须等 live adapter 接通且可稳定触发才升级
+
+优点：
+
+- 与当前分层最一致
+- 能保持 `skeleton_modeled / seam_modeled / runtime-implemented` 三层区分
+
+缺点：
+
+- 状态升级更保守
+
+风险：
+
+- 需要后续 live 接入测试矩阵配合
+
+#### 方案 C：等完整 detector runtime 才升级
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 会压平分阶段推进的价值
+
+风险：
+
+- Traceability 对阶段推进的帮助下降
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+adapter 接入前必须满足的条件至少包括：
+
+1. live seam 位置固定
+2. dual-path summary 可稳定构造
+3. adapter contract 已冻结
+4. detector 输出与 error surface 的关系已明确
+5. 正负样本与测试矩阵足够
+
+当前已满足的部分：
+
+- live seam 位置基本固定
+- dual-path summary 已稳定建模
+- adapter 输入输出 contract 已基本足够
+
+当前仍明显未满足的部分：
+
+- adapter live wiring 未存在
+- detector 输出与 runtime error surface 关系未冻结
+- live path 触发与 no-regression 证据不存在
+
+因此 challenge/gateway 错误码当前仍然不得升级。
+
+### 22.6 决策 5：下一轮最小可执行任务
+
+#### 方案 A：继续只做 adapter 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 当前边界与 contract 已经足够清晰
+- 再做纯文档轮，新增收益开始很低
+
+风险：
+
+- 重复 3-B.11 结论
+
+#### 方案 B：进入最小 adapter skeleton 实现
+
+优点：
+
+- 仍然不接 live path
+- 仍然不改 fetch/source/response_guard 行为
+- 能把下一轮推进到 adapter 自身最小内部结构
+
+缺点：
+
+- 需要极严范围控制
+
+风险：
+
+- 若范围失控，会误滑向 adapter live 接入
+
+#### 方案 C：直接进入 detector live seam adapter 接入实装
+
+优点：
+
+- 推进快
+
+缺点：
+
+- 当前仍缺 runtime error surface 冻结
+- 当前仍缺 live no-regression 设计
+- 当前仍缺 adapter 接入后的最小回退策略证明
+
+风险：
+
+- 直接越界进入 live runtime
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小集合应固定为：
+
+- future adapter 内部 input contract
+- future adapter 内部 output contract
+- no-op adapter skeleton
+- 纯内部 adapter fixture / tests
+- 明确的“未接 live path”边界测试
+
+下一轮建议阶段名为：
+
+- **Phase 3-B.12：detector live seam adapter 最小内部 skeleton 实装**
+
+### 22.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**
+
+原因：
+
+- 当前 future adapter 的职责边界已经可以基于仓库证据固定
+- 当前 adapter 与现有层的单向边界已经可以固定
+- 当前已经足够决定下一轮是否可以进入最小 adapter skeleton
+
+#### Step 2：如果主张本轮必须落代码，是否已有充分证明
+
+结论：**没有**
+
+当前无法证明：
+
+- 不落代码会阻塞本轮
+- 需要落的代码已小到不可再小
+- 新增代码不会构成 adapter live 接入
+- 新增代码不会影响既有链路
+
+因此 3-B.11 仍应停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 adapter 接入实装。
+
+## 23. 3-B.12 detector live seam adapter 最小内部 skeleton 实装结论
+
+### 23.1 当前已落地什么
+
+当前仓库已经以纯内部、纯 no-op、纯可单测的方式落地了：
+
+- `DetectorAdapterInput`
+- `DetectorAdapterOutput`
+- `DetectorAdapterOutcome`
+- adapter no-op helper skeleton
+- adapter fixtures
+- adapter contract / no-op tests
+
+当前实际代码落点为：
+
+- `backend/app/schemas/online_detector_adapter.py`
+- `backend/app/services/online/detector_adapter_skeleton.py`
+- `backend/tests/fixtures/online_detector_adapter_samples.json`
+- `backend/tests/test_online_detector_adapter_contract.py`
+
+### 23.2 当前 adapter contract 的最小范围
+
+当前 adapter input contract 只承载：
+
+- `stage`
+- `expected_response_type`
+- `fetch_outcome_summary`
+
+其中：
+
+- `fetch_outcome_summary`
+  - 仍然只能是：
+    - `FetchSuccessSummary`
+    - `FetchErrorSummary`
+
+当前 adapter output contract 只承载三种内部状态：
+
+- `noop`
+- `detector_input_prepared`
+- `detector_result_attached`
+
+它当前明确 **不** 承载：
+
+- runtime error surface
+- retry/fallback decision
+- browser/js escalation
+- parser/runtime orchestration
+
+### 23.3 当前 no-op helper 的边界
+
+当前 no-op helper 只允许做：
+
+- summary -> adapter input 的准备
+- adapter output contract 的 no-op/contract coercion
+
+当前 no-op helper 明确 **不** 做：
+
+- live wiring
+- runtime dispatch
+- error surface mapping
+- parser 协调
+- live detector 调用
+
+因此本轮 helper 的正确口径必须是：
+
+- adapter skeleton helper
+- not live adapter
+
+### 23.4 当前没有落地什么
+
+当前仍然 **没有** 落地：
+
+- live seam adapter 接入
+- `source_engine.py` 中的 adapter 调用
+- `fetch_service.py` 中的 adapter 接入
+- `response_guard_service.py` 中的 adapter 接入
+- challenge/gateway live detection
+- browser/js-required live detection
+
+### 23.5 当前仍然不支持什么
+
+当前仍必须明确表述为 **不支持**：
+
+- detector live runtime
+- detector live seam adapter 接入
+- challenge / gateway 的线上 detector
+- suspicious HTML runtime detector
+- browser/js-required runtime detector
+- anti-bot bypass
+- JS / WebView / browser fallback
+
+### 23.6 为什么这仍然不等于 live adapter
+
+因为本轮新增结构只运行在：
+
+- 内部 schema
+- 内部 no-op helper
+- fixtures
+- 单元测试
+
+它当前 **不**：
+
+- 消费 live fetch/source/response_guard 路径
+- 改变现有 router / importer / DB / frontend 行为
+- 触发任何 runtime detector wiring
+- 触发任何 runtime error surface
+
+因此本轮正确口径必须是：
+
+> adapter skeleton implemented internally, adapter still not connected to live runtime
+
+### 23.7 下一步最小任务
+
+在 3-B.12 之后，最小的下一步建议应是：
+
+- **Phase 3-B.13：detector live seam adapter 最小接入决策轮**
+
+该轮只应继续回答：
+
+- adapter internal skeleton 与 future live wiring 的最小映射关系
+- 哪些 adapter 内部结构已经足够支撑接入前决策
+- 哪些层次仍然不能碰 live path
+
+在这一步之前，仍不应直接进入：
+
+- live adapter 接入
+- `source_engine.py` detector 调用
+- `fetch_service.py` 行为修改
+- anti-bot bypass
+
+## 24. 3-B.13 detector live seam adapter 最小接入决策轮结论
+
+### 24.1 当前 future minimal live entry 还缺什么
+
+在 3-B.12 之后，仓库已经具备：
+
+- dual-path live seam summary contract
+- adapter input/output internal contract
+- adapter no-op helper
+- adapter / live seam fixtures 与 contract tests
+
+这些结构已经足够支撑本轮做“future minimal live entry”决策。
+
+当前真正还缺的不是代码，而是以下边界冻结：
+
+- “minimal live entry” 到底只算内部 no-op wiring，还是已经算 live detector 接入
+- future 最小 wiring 点到底落在 `source_engine.py` 本体、`source_engine.py` 邻接 thin helper，还是 `fetch_service.py`
+- adapter 接入后哪些行为只允许内部观察，哪些行为仍然绝对禁止
+- challenge / gateway 错误码在 future minimal live entry 后是否能升级，以及升级门槛到底是什么
+
+因此本轮正确动作仍然是：
+
+- 先把 minimal live-entry boundary 写死
+- 先把 allowed / disallowed behaviors 写死
+- 先把错误码升级门槛写死
+- 默认不进入 adapter live 接入
+
+### 24.2 决策 1：future adapter 的“最小接入”到底是什么
+
+#### 方案 A：只允许内部 no-op wiring + internal observation
+
+优点：
+
+- 与当前 `FetchSuccessSummary` / `FetchErrorSummary` 和 `DetectorAdapterInput` / `DetectorAdapterOutput` 的真实仓库状态最一致
+- 最不容易把 adapter import / 调用误写成“detector 已上线”
+- 最利于下一轮小步落“可回退、零行为变化”的 live-entry skeleton
+
+缺点：
+
+- 不能证明 detector 错误码已能靠近 runtime surface
+- 对调试可见性仍然较克制
+
+风险：
+
+- 如果文档措辞不严，内部观察仍可能被误读为“线上已能识别 challenge/gateway”
+
+#### 方案 B：允许 internal observation + internal surfaced classification
+
+优点：
+
+- 能更明确表达 live path 已经看到了 detector result
+- 对 future trace/debug 看起来更直观
+
+缺点：
+
+- “internal surfaced” 与“runtime surfaced”边界很容易被混写
+- 会把 3-B.13 从接入决策轮推向 error-surface 决策轮
+
+风险：
+
+- 最容易诱发新增术语膨胀，并让后续 AI 误把 classification result 当成 public behavior
+
+#### 方案 C：允许小范围影响 runtime behavior
+
+优点：
+
+- 推进速度最快
+
+缺点：
+
+- 直接越过本轮边界
+- 等价于提前进入 adapter live 接入实装
+
+风险：
+
+- 会把“minimal live entry”误写成“detector live runtime 已支持”
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+本轮将 “future minimal live entry” 固定定义为：
+
+- 仅允许在 future 某个非 public 的 live seam 点调用 adapter
+- 仅允许构造 `DetectorAdapterInput`
+- 仅允许获得 `DetectorAdapterOutput`
+- 仅允许在内部调试、断言、测试或 trace 语义中观察 `detector_result` / `recommended_error_code`
+
+它当前明确 **不意味着**：
+
+- runtime error surface 已改变
+- detector 已正式参与产品行为
+- challenge/gateway 已能对外稳定识别
+- detector 已与 parser / fallback / browser / JS 路径联动
+
+不推荐方案 B 的原因：
+
+- 会额外引入“internal surfaced”这类容易扩散的中间语义
+
+不推荐方案 C 的原因：
+
+- 已经超出 3-B.13 的决策轮边界
+
+### 24.3 决策 2：最小 wiring 点到底在哪里
+
+#### 方案 A：在 `source_engine.py` 内部放极小调用点
+
+优点：
+
+- stage context 现成
+- 位置直观，处于 `fetch -> parser` 之间
+
+缺点：
+
+- 容易继续把 `source_engine.py` 写胖
+- minimal live-entry 细节会直接和现有 preview/discovery 编排混在一起
+
+风险：
+
+- 若后续再叠加 detector dispatch / error mapping，`source_engine.py` 会快速长成大杂烩
+
+#### 方案 B：放在 `source_engine.py` 邻接的 future thin helper/coordinator
+
+优点：
+
+- 逻辑位置仍然 anchored 在 `source_engine.py` seam
+- 实际职责可以保持为一个薄中间层
+- 既能拿到 stage context，又能避免污染 `fetch_service.py` / parser
+- 最利于下一轮单独回退
+
+缺点：
+
+- 需要新增一个更明确的 future helper/coordinator 概念
+- 下一轮必须继续严格控制该 helper 只做 no-op live-entry skeleton
+
+风险：
+
+- 如果 helper 过重，会演变成新的 runtime coordinator
+
+#### 方案 C：在 `fetch_service.py` 内部加 hook
+
+优点：
+
+- 最早拿到 transport response / exception
+
+缺点：
+
+- `fetch_service.py` 当前是 leaf transport，不持有 stage context
+- 会把 transport/generic response_guard 与 detector seam 混成一层
+- 容易把 `fetch_service.py` 变成“业务前置分发器”
+
+风险：
+
+- 一旦从这里起步，challenge/gateway/browser/js 检测很容易继续反向污染 transport 层
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+本轮固定结论为：
+
+- future 最小 wiring 点逻辑上仍位于 `source_engine.py` 所在的 `fetch_stage_response(...)` 之后、`parse_*_preview(...)` 之前
+- 但实际实现更推荐由 `source_engine.py` 调用一个邻接的 thin helper/coordinator
+- `fetch_service.py` 继续只负责 transport + generic response_guard
+- parser / content_parse 继续只负责解析，不承担 live-entry seam
+
+不推荐方案 A 的原因：
+
+- 它的逻辑位置是对的，但把细节直接堆进 `source_engine.py` 会放大维护成本
+
+不推荐方案 C 的原因：
+
+- `fetch_service.py` 仍然不应成为 detector wiring 点
+
+### 24.4 决策 3：接入后允许发生什么，不允许发生什么
+
+#### 方案 A：只允许 internal observation
+
+优点：
+
+- 最符合本轮“只定义最小接入，不定义 runtime behavior”目标
+- 与现有 adapter no-op skeleton 的边界自然衔接
+- 对 Traceability 和回退都最友好
+
+缺点：
+
+- 不能提前验证 detector result 如何靠近 runtime
+
+风险：
+
+- 需要明确“internal observation”仅限内部 trace / assert / test，不进入 public behavior
+
+#### 方案 B：允许 internal surfaced result，但不改 public behavior
+
+优点：
+
+- 能让下一轮更容易观察 live path 中的 adapter result
+
+缺点：
+
+- “surfaced” 一词本身就容易造成阶段误导
+- 会逼近 runtime error surface mapping 讨论
+
+风险：
+
+- 容易被后续 AI 写成“detector result 已进入上层控制流”
+
+#### 方案 C：允许 detector result 直接影响上层控制流
+
+优点：
+
+- 表面上推进最快
+
+缺点：
+
+- 直接跨入 live adapter 接入甚至 detector live runtime
+- 会让 response_guard / parser / fallback 边界同时失稳
+
+风险：
+
+- public behavior 漂移
+- 回退困难
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+future minimal live entry 后，当前只允许：
+
+- 内部构造 `DetectorAdapterInput`
+- 内部拿到 `DetectorAdapterOutput`
+- 内部记录、断言或调试级观察 `detector_result` / `recommended_error_code`
+
+future minimal live entry 后，当前仍然明确 **不允许**：
+
+- 直接改变 API 输出
+- 直接抛 detector 错误码给上层
+- 直接触发 fallback / browser / JS 路径
+- 直接替代 `response_guard_service.py`
+- 直接影响 parser / content_parse
+
+这些禁止项应继续通过两类方式钉住：
+
+- 文档口径：明确写“minimal live entry != live detector runtime”
+- 边界测试：明确证明 `fetch_service.py` / `response_guard_service.py` / parser 路径不感知 adapter 结果
+
+不推荐方案 B 的原因：
+
+- 它已经开始把内部结果推近上层控制流
+
+不推荐方案 C 的原因：
+
+- 已经不再是 3-B.13 的“最小接入决策”
+
+### 24.5 决策 4：错误码何时才能更靠近 runtime
+
+#### 方案 A：minimal live entry 一接通就升级部分 detector 错误码
+
+优点：
+
+- 口径简单
+
+缺点：
+
+- 会把 future adapter 调用误写成 runtime actually raises
+- 与当前 `adapter_modeled` 的真实语义冲突
+
+风险：
+
+- 最容易把 challenge/gateway 写成“已支持线上识别”
+
+#### 方案 B：引入新的 `internal_observed` 生命周期状态
+
+优点：
+
+- 能表达“比 adapter_modeled 更靠近 live，但仍未 runtime-implemented”
+
+缺点：
+
+- 当前生命周期术语已经较多
+- 新状态会增加文档和 Traceability 认知负担
+
+风险：
+
+- 若没有真实 live wiring 证据，新增状态只会让术语体系更混乱
+
+#### 方案 C：只有真正 live runtime 行为可稳定复现后才升级
+
+优点：
+
+- 与当前仓库证据最一致
+- 最能防止“接入”被误写成“正式支持”
+- 与现有 `adapter_modeled -> runtime-implemented` 口径最一致
+
+缺点：
+
+- detector 错误码状态提升会更保守
+
+风险：
+
+- 需要在后续 live-entry skeleton 轮里继续接受“状态暂不升级”的约束
+
+#### 推荐结论
+
+推荐 **方案 C**。
+
+本轮明确固定：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+即使 future minimal live entry 落地，当前也 **不应仅因 adapter 被调用** 就从：
+
+- `adapter_modeled`
+
+升级为：
+
+- `runtime-implemented`
+
+本轮同时不推荐新增正式生命周期状态 `internal_observed`。更保守、也更清晰的写法是：
+
+- future minimal live entry 最多只允许“在内部观察 recommended_error_code”
+- 但错误码生命周期状态继续保持不变
+
+只有同时满足以下条件后，challenge/gateway 才有资格 future 升级：
+
+1. live-entry helper 已真实存在
+2. live path 能稳定调用 adapter
+3. live path 中的 detector result 与 runtime error surface 关系已冻结
+4. 正样本、负样本与 no-regression 证明都存在
+5. 文档、Traceability、测试与错误码状态仍明确区分：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+不推荐方案 A 的原因：
+
+- 会直接破坏当前错误码文档的可信度
+
+不推荐方案 B 的原因：
+
+- 当前不足以证明必须引入新生命周期状态
+
+### 24.6 决策 5：下一轮最小可执行任务是什么
+
+#### 方案 A：继续只做 live-entry 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 当前边界已经足够清楚，再做一轮纯文档会明显重复 3-B.13
+
+风险：
+
+- 继续拖慢进入最小 no-op wiring 验证的节奏
+
+#### 方案 B：进入 minimal live-entry skeleton 实现（仅内部 no-op wiring）
+
+优点：
+
+- 仍然不进入 adapter live 接入
+- 能把本轮文档结论收敛成最小可验证内部结构
+- 最利于证明“live path 可调用 adapter，但 public behavior 仍零变化”
+
+缺点：
+
+- 需要非常严格的范围控制
+
+风险：
+
+- 如果把内部观察写成上层行为，就会滑向 live adapter 接入
+
+#### 方案 C：直接进入 detector adapter 最小 live 接入实装
+
+优点：
+
+- 推进速度最快
+
+缺点：
+
+- 当前仍缺 runtime error surface 冻结
+- 当前仍缺 live no-regression 设计
+- 当前仍缺“adapter 结果如何不影响 parser / response_guard”的实证
+
+风险：
+
+- 直接越界进入 detector live runtime
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小集合应固定为：
+
+- 一个 `source_engine.py` 邻接的 thin live-entry helper/coordinator
+- 仅在内部 live seam 点做 no-op adapter 调用
+- 仅允许内部构造 `DetectorAdapterInput`
+- 仅允许内部拿到 `DetectorAdapterOutput`
+- 仅允许内部 observation，不改变任何 public behavior
+- 边界测试必须继续证明：
+  - 不改 `fetch_service.py` 行为
+  - 不改 `response_guard_service.py` 行为
+  - 不改 parser / content_parse 行为
+  - 不 surface detector 错误码
+
+下一轮建议阶段名为：
+
+- **Phase 3-B.14：detector live seam adapter 最小 live-entry skeleton 实现**
+
+当前不推荐直接进入真正 live 接入，原因是：
+
+- 仍缺 runtime error surface 冻结
+- 仍缺 public no-behavior-change 证据
+- 仍缺 challenge/gateway live 触发与回归证明
+
+### 24.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**。
+
+原因：
+
+- 当前 internal seam skeleton 与 adapter skeleton 已足够支撑 3-B.13 决策
+- 本轮真正缺的是 live-entry boundary，而不是新增代码
+- 本轮已经足以决定下一轮能否安全进入 minimal live-entry skeleton
+
+#### Step 2：如果主张本轮必须落代码，是否已有充分证明
+
+结论：**没有**。
+
+当前无法证明：
+
+- 不落代码会阻塞 3-B.13
+- 需要落的代码已小到不可再小
+- 新增代码不会构成 adapter live 接入
+- 新增代码不会影响既有 fetch/source/parser 链路
+
+因此 3-B.13 正确停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 detector live seam adapter 接入实装。
+
+## 25. 3-B.14 detector live seam adapter 最小 live-entry skeleton 实现结论
+
+### 25.1 当前最小 live-entry skeleton 落点
+
+按 3-B.13 已冻结的边界，本轮最小 live-entry skeleton 的代码落点固定为：
+
+- `backend/app/services/online/detector_live_entry_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+
+其中：
+
+- `detector_live_entry_skeleton.py`
+  - 只负责内部 summary -> adapter input/output -> detector result 的 no-op wiring
+- `source_engine.py`
+  - 只在 `fetch_stage_response(...)` 之后、parser 之前做一次邻接 seam 调用
+  - 调用结果仅停留在内部 observation，不进入返回值或异常 surface
+
+本轮没有把 wiring 放进：
+
+- `fetch_service.py`
+- `response_guard_service.py`
+- parser / content_parse
+
+### 25.2 当前已落地什么
+
+当前仓库已经以纯内部、纯 no-op、纯可回退的方式落地了：
+
+- success path live-entry helper
+- error path live-entry helper
+- summary -> adapter input/output 的 live-path 内部组装
+- 在 summary 信息足够时的 detector skeleton 内部 observation
+- `source_engine.py` 邻接 seam 的最小 no-op 调用点
+- live-entry fixtures
+- live-entry wiring / no-behavior-change / boundary tests
+
+当前实际代码落点为：
+
+- `backend/app/services/online/detector_live_entry_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_live_entry_samples.json`
+- `backend/tests/test_online_detector_live_entry_skeleton.py`
+
+### 25.3 当前 live-entry skeleton 允许做到什么
+
+本轮当前只允许做到：
+
+- 内部构造 `FetchSuccessSummary` / `FetchErrorSummary`
+- 内部构造 `DetectorAdapterInput`
+- 内部获得 `DetectorAdapterOutput`
+- 在 summary 字段足够时，内部获得 detector skeleton 的 `classification result`
+- 在 `source_engine.py` 中以局部变量/局部 no-op 调用的形式完成 observation
+
+### 25.4 当前 live-entry skeleton 明确不做什么
+
+本轮当前仍然 **没有** 落地：
+
+- detector live runtime
+- adapter live 接入对外行为
+- runtime error surface 变化
+- API 输出变化
+- parser / content_parse 输入变化
+- response_guard 行为变化
+- fallback / browser / JS / retry 行为
+- challenge/gateway live detection 上线
+
+当前仍必须明确表述为 **不支持**：
+
+- detector live runtime
+- detector adapter live 接入
+- challenge / gateway 的线上 detector
+- suspicious HTML runtime detector
+- browser/js-required runtime detector
+- anti-bot bypass
+- JS / WebView / browser fallback
+
+### 25.5 为什么这仍然不等于 live detector runtime
+
+因为本轮新增 wiring 只做：
+
+- internal no-op wiring
+- internal observation
+
+它当前 **不**：
+
+- 改 `fetch_service.py` 返回值
+- 改 `response_guard_service.py` 分类结果
+- 改 parser / content_parse 行为
+- 改 router / importer / DB / frontend
+- surface detector 错误码到 runtime path
+
+并且 `source_engine.py` 中的 live-entry helper 调用还加了内部 no-op guard：
+
+- 即便 live-entry helper 本身异常
+- 既有返回值与既有异常 surface 仍保持原样
+
+因此本轮正确口径必须是：
+
+> minimal live-entry skeleton implemented internally, external behavior remains unchanged
+
+### 25.6 错误码状态结论
+
+本轮没有新增 detector 错误码生命周期状态。
+
+本轮仍继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - `adapter_modeled`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `adapter_modeled`
+
+原因：
+
+- 这轮只是 internal live-entry skeleton
+- 不是 runtime error surface 接通
+- 不是 public behavior 改写
+
+因此本轮不引入：
+
+- `live-entry-modeled`
+- `runtime-implemented`
+
+### 25.7 下一步最小任务
+
+在 3-B.14 之后，最小的下一步建议应是：
+
+- **Phase 3-B.15：detector live behavior gating 决策轮**
+
+该轮只应继续回答：
+
+- 当前 internal observation 哪些 future 可以进入更靠近 runtime 的 gating
+- 哪些 detector result 仍必须继续停在 internal-only
+- runtime error surface / public behavior 升级前还差哪些门槛
+- 为什么仍然不能直接进入 challenge/gateway live support 或 anti-bot bypass
+
+在这一步之前，仍不应直接进入：
+
+- detector live runtime 正式支持
+- adapter live 接入对外生效
+- challenge/gateway live detection 上线
+- browser/js fallback
+- anti-bot bypass
+
+## 26. 3-B.15 detector live behavior gating 决策轮结论
+
+### 26.1 当前 future behavior gating 还缺什么
+
+在 3-B.14 之后，仓库已经具备：
+
+- detector static skeleton
+- live seam summary contract
+- adapter internal skeleton
+- minimal live-entry skeleton
+- `source_engine.py` 邻接 seam 的 internal observation 调用点
+
+这意味着当前仓库已经能够证明：
+
+- detector result 可以在 live path 内部被构造
+- 但 detector result 仍然只停留在 internal observation
+- 外部返回值、异常、parser、response_guard 仍然完全不感知这些结果
+
+当前真正还缺的不是代码，而是以下 gating 边界冻结：
+
+- behavior gating 到底只是“内部信号上浮”，还是已经意味着 runtime 行为变化
+- detector result 如果 future 被更高一层看到，最小安全上限到底是哪一层
+- 哪些行为可以被 detector gate 感知，哪些行为一旦开放就已经不是 gating，而是 runtime behavior change
+- challenge/gateway 错误码在 future gating 后是否能更靠近 runtime，以及门槛到底是什么
+
+因此本轮最重要的不是继续写代码，而是先把 behavior gating 的定义、上限和禁止项写死。
+
+### 26.2 决策 1：behavior gating 到底是什么
+
+#### 方案 A：只允许 internal observation -> internal signal 的 no-op gating
+
+优点：
+
+- 最符合当前仓库已存在的 internal observation 事实
+- 最容易和 3-B.14 的 no-behavior-change 边界对齐
+- 最利于下一轮继续以纯内部、纯可回退方式推进
+
+缺点：
+
+- 仍然不能证明 detector result 如何靠近 runtime surface
+- 对 future gate 层的形状描述会更抽象
+
+风险：
+
+- 如果不把“internal signal”讲清楚，后续 AI 仍可能把它写成行为已生效
+
+#### 方案 B：允许 detector result 到达更靠近 runtime 的内部 surfaced 层
+
+优点：
+
+- 比单纯 observation 更接近 future gating 真实目标
+- 能帮助 future 明确“哪个内部 decision point 第一次拿到 detector result”
+
+缺点：
+
+- “internal surfaced” 一词容易被混写成“对外 surfaced”
+- 如果没有强约束，容易继续滑向 runtime-visible behavior
+
+风险：
+
+- 最容易引发术语漂移
+
+#### 方案 C：允许 detector result 小范围改变外部行为
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 已经不再是 gating 决策，而是 runtime behavior 变更决策
+- 会直接越过当前阶段边界
+
+风险：
+
+- 极易被误写成 detector 已上线
+
+#### 推荐结论
+
+推荐 **方案 A**，同时在文档层显式定义一个 future gate-layer 概念：
+
+- behavior gating 只意味着：
+  - future 某个内部 decision point 可以接收到 detector result 派生出的 internal signal
+  - future 可以基于门控条件决定“是否允许继续携带这个 internal signal”
+- behavior gating **不意味着**：
+  - API 输出变化
+  - 异常 surface 变化
+  - browser/js/fallback 被触发
+  - parser / response_guard 被 detector 改写
+
+这里的 “gating” 应定义为：
+
+- detector result 从 internal observation 到更高一层 internal signal carrying 的门
+- 而不是 public behavior change 的门
+
+不推荐方案 B 的原因：
+
+- 它可以作为概念存在，但当前不应直接作为实现目标
+
+不推荐方案 C 的原因：
+
+- 已经越过 3-B.15 的决策边界
+
+### 26.3 决策 2：future detector 结果最小可影响层级
+
+#### 方案 A：停在 internal observation
+
+优点：
+
+- 最保守
+- 与 3-B.14 当前仓库状态完全一致
+
+缺点：
+
+- 不能回答 future gating 到底 first touches 哪一层
+
+风险：
+
+- 下一轮容易再次重复“仅 observation”的结论
+
+#### 方案 B：允许 internal surfaced signal
+
+优点：
+
+- 能清楚区分：
+  - 当前 helper/local discard observation
+  - future gate-layer internal signal carrying
+- 能为下一轮 minimal gating skeleton 提供最小清晰入口
+
+缺点：
+
+- 需要非常明确写清它不是 runtime-visible surface
+
+风险：
+
+- 如果被拿来当错误码生命周期状态，会引入术语混乱
+
+#### 方案 C：允许试探接近 runtime error surface
+
+优点：
+
+- 最接近 future public behavior
+
+缺点：
+
+- 当前缺少 gating 与 error-surface 关系冻结
+- 当前缺少 public no-regression 证据
+
+风险：
+
+- 会直接把 3-B.15 写成 behavior 已开始生效
+
+#### 推荐结论
+
+推荐 **方案 B**，但必须加两个硬约束：
+
+1. `internal surfaced signal` 只作为 future gate-layer contract 概念存在
+2. 它不是新的错误码生命周期状态，更不是 `runtime-implemented`
+
+因此当前最安全的上限应固定为：
+
+- future detector result 最多先传播到 `internal surfaced signal`
+- 当前阶段明确禁止继续跨到：
+  - runtime error surface
+  - public behavior layer
+
+不推荐方案 A 的原因：
+
+- 它过于保守，不足以为下一轮 minimal gating skeleton 提供清晰收敛目标
+
+不推荐方案 C 的原因：
+
+- 当前证据不足以支持试探 runtime-visible 层
+
+### 26.4 决策 3：允许被 gating 的行为与绝对禁止的行为
+
+#### 方案 A：只允许内部记录与内部 contract 传播
+
+优点：
+
+- 最符合当前阶段边界
+- 最利于文档与测试继续钉死 no-behavior-change
+
+缺点：
+
+- 看起来推进较慢
+
+风险：
+
+- 需要继续明确“传播”只限 internal layer
+
+#### 方案 B：允许内部更高层感知 detector result，但不改外部行为
+
+优点：
+
+- 更贴近 future behavior gating 的真实用途
+- 有助于下一轮定义一个专门的 internal gate decision contract
+
+缺点：
+
+- 如果边界不够硬，容易被继续扩写成控制流改变
+
+风险：
+
+- 需要更强的 no-regression 测试规划
+
+#### 方案 C：允许 detector result 开始影响控制流
+
+优点：
+
+- 推进快
+
+缺点：
+
+- 一旦影响控制流，就已经不是“gating boundary”，而是 runtime behavior change
+
+风险：
+
+- 会污染 parser / response_guard / API / error surface
+
+#### 推荐结论
+
+推荐 **方案 B**，但仅限 internal-only 范围。
+
+future 最小 gating 后，允许的行为最多包括：
+
+- 内部记录 detector 命中
+- 内部返回一个更明确的 internal signal/result
+- 为 future error surface mapping 提供证据
+
+此阶段绝对禁止的行为包括：
+
+- API 输出变化
+- 异常 surface 变化
+- parser / content_parse 分支变化
+- fallback / browser / JS 路径触发
+- 自动 retry / backoff
+- detector 替代 response_guard
+
+这些禁止项应继续通过两类方式钉住：
+
+- 文档：明确写“gating != runtime-visible behavior”
+- 测试规划：继续要求 no-behavior-change / no-surface-change / no-parser-branch-change
+
+不推荐方案 A 的原因：
+
+- 它对下一轮 minimal gating skeleton 的指导性不够
+
+不推荐方案 C 的原因：
+
+- 已经越界进入 runtime behavior 变化
+
+### 26.5 决策 4：错误码何时可以进一步靠近 runtime
+
+#### 方案 A：gating skeleton 一落地就允许部分 detector 错误码升级
+
+优点：
+
+- 口径简单
+
+缺点：
+
+- 与当前 `adapter_modeled` 口径冲突
+- 会把 gate-layer signal 误写成 runtime actually raises
+
+风险：
+
+- 最容易把 challenge/gateway 写成线上已支持
+
+#### 方案 B：允许 internal surfaced，但仍不升级为 runtime-implemented
+
+优点：
+
+- 能承认 future gate-layer 可能比 internal observation 更进一步
+- 同时保持错误码状态不越界
+
+缺点：
+
+- 需要把“internal surfaced”与错误码状态明确拆开
+
+风险：
+
+- 如果表达不清，仍会引起误读
+
+#### 方案 C：只有真正 live behavior change 且可稳定复现后才升级
+
+优点：
+
+- 与当前文档体系和仓库事实最一致
+- 最能防止阶段误导
+
+缺点：
+
+- 状态升级更保守
+
+风险：
+
+- 需要继续接受“错误码状态暂不升级”的约束
+
+#### 推荐结论
+
+推荐 **方案 C**，并补充接受 **方案 B** 的概念层结论：
+
+- future gate-layer 可以存在 `internal surfaced signal`
+- 但 challenge/gateway 错误码生命周期状态仍然 **不因此升级**
+
+也就是说：
+
+- `recommended only`
+- `internal observed`
+- `internal surfaced`
+
+这些都只能作为 gate-layer 行为语义，不应被写成新的错误码生命周期状态。
+
+因此 challenge/gateway 当前继续保持：
+
+- `adapter_modeled`
+
+只有同时满足以下条件后，才允许 future 靠近 runtime surface：
+
+1. gate-layer 与 runtime error surface 的关系已冻结
+2. public behavior change 已单独决策并小步实现
+3. live path 可稳定触发对应 detector 结果
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试仍明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+不推荐方案 A 的原因：
+
+- 会直接破坏错误码状态体系
+
+不推荐方案 B 的原因：
+
+- 如果把它误当成 lifecycle，会继续膨胀术语
+
+### 26.6 决策 5：下一轮最小可执行任务是什么
+
+#### 方案 A：继续只做 gating 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 当前 gating boundary 已足够清楚，继续纯文档会明显重复
+
+风险：
+
+- 推进停滞
+
+#### 方案 B：进入 minimal gating skeleton 实现（仅 internal signal / no-op decision）
+
+优点：
+
+- 仍然不进入 runtime-visible behavior
+- 能把 3-B.15 的概念边界收敛成最小内部 gate contract
+- 最利于证明：
+  - internal surfaced signal exists
+  - external behavior still unchanged
+
+缺点：
+
+- 需要非常严格控制范围
+
+风险：
+
+- 如果把 gate decision 写成控制流改变，就会越界
+
+#### 方案 C：直接进入 detector 结果影响 runtime 的最小实装
+
+优点：
+
+-
+  推进最快
+
+缺点：
+
+- 当前仍缺 gate-layer 与 runtime error surface 的关系冻结
+- 当前仍缺 public no-regression 证明
+- 当前仍缺“哪些结果允许 first visible”的正式证据链
+
+风险：
+
+- 会直接跨进 runtime-visible behavior
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小集合应固定为：
+
+- 一个 internal gate input/result contract
+- 一个 source-engine 邻接的 minimal gating helper
+- 仅 internal signal carrying
+- 仅 no-op gate decision
+- 仍然不改返回值、不改异常、不改 parser、不改 response_guard
+- 对应的 no-behavior-change / no-surface-change 测试
+
+下一轮建议阶段名为：
+
+- **Phase 3-B.16：detector live behavior minimal gating skeleton 实现**
+
+当前不推荐直接进入 runtime-visible behavior，原因是：
+
+- 仍缺 gate-layer 与 runtime surface 的明确映射
+- 仍缺 public behavior 变更的独立决策轮
+- 仍缺 challenge/gateway visible behavior 的稳定验证
+
+### 26.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**。
+
+原因：
+
+- 当前 minimal live-entry skeleton 已足够证明 detector result 到达 internal observation 层
+- 当前最危险的歧义是 gating 会不会被误写成 behavior 已生效
+- 本轮已经足够决定下一轮能否安全进入 minimal gating skeleton
+
+#### Step 2：如果主张本轮必须落代码，是否已有充分证明
+
+结论：**没有**。
+
+当前无法证明：
+
+- 不落代码会阻塞 3-B.15
+- 需要落的代码已小到不可再小
+- 新增代码不会构成 runtime-visible behavior
+- 新增代码不会影响既有链路
+
+因此 3-B.15 正确停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 behavior gating skeleton 实装。
+
+## 27. 3-B.16 detector live behavior minimal gating skeleton 实现结论
+
+### 27.1 当前 minimal gating skeleton 最小落点
+
+按 3-B.15 已冻结的边界，本轮 minimal gating skeleton 的代码落点固定为：
+
+- `backend/app/schemas/online_detector_gate.py`
+- `backend/app/services/online/detector_gating_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+
+其中：
+
+- `online_detector_gate.py`
+  - 只负责 internal gate input / gate result / carried signal / noop decision contract
+- `detector_gating_skeleton.py`
+  - 只负责 adapter output -> gate input -> gate result 的最小 no-op gating helper
+- `source_engine.py`
+  - 只在现有 live-entry no-op observation 之后追加一层 internal gating helper 调用
+  - 调用结果继续停留在 internal-only 层
+
+本轮没有把 gating 放进：
+
+- `fetch_service.py`
+- `response_guard_service.py`
+- parser / content_parse
+
+### 27.2 当前已落地什么
+
+当前仓库已经以纯内部、纯 no-op、纯可回退的方式落地了：
+
+- `DetectorGateInput`
+- `DetectorGateSignal`
+- `DetectorGateResult`
+- `DetectorGateOutcome`
+- `DetectorGateDecision`
+- minimal gating helper
+- source-engine 邻接 gating no-op 调用点
+- gating fixtures
+- gate contract / helper / signal carrying / no-behavior-change tests
+
+当前实际代码落点为：
+
+- `backend/app/schemas/online_detector_gate.py`
+- `backend/app/services/online/detector_gating_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_gating_samples.json`
+- `backend/tests/test_online_detector_gating_skeleton.py`
+
+### 27.3 当前 gating skeleton 允许做到什么
+
+本轮当前只允许做到：
+
+- internal gate input 被构造
+- internal gate result 被构造
+- detector result 被内部携带到 gate-layer
+- gate helper 返回 no-op decision
+- source-engine 邻接位置内部调用 gating helper
+
+其中 current carried signal 只表达：
+
+- detector candidate 的 internal signal carrying
+- 以及对应的 recommended error code 仅作为 internal-only 信息
+
+### 27.4 当前 gating skeleton 明确不做什么
+
+本轮当前仍然 **没有** 落地：
+
+- runtime-visible gating
+- detector live runtime
+- runtime error surface 变化
+- API 输出变化
+- parser / content_parse 行为变化
+- response_guard 行为变化
+- control flow 变化
+- fallback / browser / JS / retry 行为
+- challenge/gateway live detection 上线
+
+当前仍必须明确表述为 **不支持**：
+
+- detector live runtime
+- runtime-visible gating
+- challenge / gateway 的线上 detector
+- suspicious HTML runtime detector
+- browser/js-required runtime detector
+- anti-bot bypass
+- JS / WebView / browser fallback
+
+### 27.5 为什么这仍然不等于 runtime-visible gating
+
+因为本轮新增 gating 只做：
+
+- internal signal carrying
+- no-op gate decision
+
+它当前 **不**：
+
+- 改 `fetch_service.py` 返回值
+- 改 `response_guard_service.py` 分类结果
+- 改 parser / content_parse 行为
+- 改 router / importer / DB / frontend
+- 改异常 surface
+- surface detector 错误码到 runtime path
+
+并且 `source_engine.py` 中的 gating helper 调用仍被内部 no-op guard 包裹：
+
+- 即便 gating helper 本身异常
+- 既有返回值与既有异常 surface 仍保持原样
+
+因此本轮正确口径必须是：
+
+> minimal gating skeleton implemented internally, external behavior remains unchanged
+
+### 27.6 错误码状态结论
+
+本轮没有新增 detector 错误码生命周期状态。
+
+本轮仍继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - `adapter_modeled`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `adapter_modeled`
+
+本轮也不引入：
+
+- `internal_observed`
+- `internal_surfaced`
+- `runtime-implemented`
+
+作为错误码 lifecycle 新状态。
+
+### 27.7 下一步最小任务
+
+在 3-B.16 之后，最小的下一步建议应是：
+
+- **Phase 3-B.17：detector runtime-visible gating 决策轮**
+
+该轮只应继续回答：
+
+- 哪一类 internal gate result future 有资格 first become runtime-visible
+- 哪些 detector result 仍必须继续停在 internal-only
+- runtime-visible gating 与 error surface / API / parser 的真实接缝应该如何定义
+- 为什么仍然不能直接进入 challenge/gateway live support 或 anti-bot bypass
+
+在这一步之前，仍不应直接进入：
+
+- detector live runtime 正式支持
+- runtime-visible gating 生效
+- challenge/gateway live detection 上线
+- browser/js fallback
+- anti-bot bypass
+
+## 28. 3-B.17 detector runtime-visible gating 决策轮结论
+
+### 28.1 当前 future runtime-visible gating 还缺什么
+
+在 3-B.16 之后，仓库已经具备：
+
+- detector static skeleton
+- live seam summary contract
+- adapter internal skeleton
+- minimal live-entry skeleton
+- minimal gating skeleton
+- `source_engine.py` 邻接 seam 的 internal signal carrying / no-op gate decision
+
+这意味着当前仓库已经能够证明：
+
+- detector result 可以在 live path 内部被构造
+- detector result 可以进入 gate-layer internal contract
+- 但 detector result 仍然没有进入更高层 runtime-visible boundary
+- 外部返回值、异常、parser、response_guard 仍然完全不感知这些结果
+
+当前真正还缺的不是代码，而是以下 runtime-visible 边界冻结：
+
+- `runtime-visible gating` 到底只是“更高一层 internal boundary 可见”，还是已经意味着 external behavior change
+- detector result 如果 future 开始变得 runtime-visible，最小安全上限到底是哪一层
+- 哪些行为可以被 runtime-visible gating 感知，哪些行为一旦开放就已经不是 gating，而是 runtime behavior change
+- challenge/gateway 错误码在 future runtime-visible gating 后是否能更靠近 runtime surface，以及门槛到底是什么
+
+因此本轮最重要的不是继续写代码，而是先把 runtime-visible definition、最小可见层和禁止项写死。
+
+### 28.2 决策 1：runtime-visible gating 的定义
+
+#### 方案 A：只允许 internal higher-layer carrying / observation
+
+优点：
+
+- 最保守
+- 最符合当前 3-B.16 已有 internal signal carrying 的事实
+- 最不容易误导为外部行为已开始变化
+
+缺点：
+
+- 对下一轮的收敛目标不够明确
+
+风险：
+
+- 容易继续停留在“仍只是局部内部状态”，无法定义 future higher-layer boundary
+
+#### 方案 B：允许 internal surfaced signal 到达更靠近 runtime 的 boundary
+
+优点：
+
+- 能明确 future 哪一层 first sees detector gate result
+- 能把 runtime-visible gating 定义为“更高一层 internal boundary 可见”
+- 最适合作为下一轮最小 skeleton 的清晰入口
+
+缺点：
+
+- 需要非常明确写清：它仍然不是 public behavior
+
+风险：
+
+- 如果措辞不严，后续 AI 可能把“runtime-visible”误读成“用户可见/调用方可见”
+
+#### 方案 C：允许 detector result 小范围改变外部行为
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 已经不再是 runtime-visible gating 决策，而是 runtime behavior change 决策
+- 直接越过当前阶段边界
+
+风险：
+
+- 最容易被误写成 detector 已正式支持
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+本轮将 `runtime-visible gating` 固定定义为：
+
+- future 某个更高一层的 internal decision boundary 可以 first see detector gate result
+- detector result 不再只停留在 helper 局部变量，而进入一个更持久但仍是 internal-only 的 boundary
+- 该 boundary 可以为 future runtime error surface mapping 做准备
+
+它当前明确 **不意味着**：
+
+- API 输出已变化
+- 调用方已收到 detector 错误
+- browser/js/fallback 已自动触发
+- parser/content_parse 已改走新分支
+- anti-bot 已被处理
+
+不推荐方案 A 的原因：
+
+- 它不足以为下一轮定义一个清晰的 higher-layer carrying 入口
+
+不推荐方案 C 的原因：
+
+- 已经越过 3-B.17 的决策边界
+
+### 28.3 决策 2：最小可见层到底是哪一层
+
+#### 方案 A：停在 `source_engine.py` 邻接 seam 的局部层
+
+优点：
+
+- 最保守
+- 与当前仓库实现完全一致
+
+缺点：
+
+- 这仍然只是 3-B.16 的 internal signal carrying
+- 不足以称为 runtime-visible gating
+
+风险：
+
+- 下一轮会继续重复“还在局部 helper 层”
+
+#### 方案 B：允许进入更高层 internal decision boundary
+
+优点：
+
+- 能定义一个比 helper 局部层更高、但仍不对外可见的最小可见层
+- 与 3-B.17 的“runtime-visible 但仍 internal-only”最一致
+- 最利于下一轮实现 minimal runtime-visible gating skeleton
+
+缺点：
+
+- 需要严格限制这个 higher-layer boundary 仍不拥有 runtime error surface
+
+风险：
+
+- 如果 boundary 设计过宽，容易膨胀成新的 runtime decision owner
+
+#### 方案 C：允许进入 public exception / public response surface 试探接近
+
+优点：
+
+- 最接近 future 对外行为
+
+缺点：
+
+- 当前缺少 public no-regression 证据
+- 当前缺少 error surface 映射冻结
+
+风险：
+
+- 会直接把 3-B.17 写成 behavior 已开始生效
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+当前阶段最安全的上限应固定为：
+
+- future 一个更高层的 `internal decision boundary`
+
+它可以：
+
+- 读取 detector gate result
+- 携带 internal surfaced signal 更久一点
+
+但它当前仍然明确 **不是**：
+
+- public response surface
+- public exception surface
+- runtime error surface owner
+
+不推荐方案 A 的原因：
+
+- 它还不够“runtime-visible”
+
+不推荐方案 C 的原因：
+
+- 当前证据不足以允许 public-layer 试探接近
+
+### 28.4 决策 3：允许被 runtime-visible gating 感知的行为与绝对禁止的行为
+
+#### 方案 A：只允许 internal carrying / observation
+
+优点：
+
+- 最稳
+- 与当前 no-behavior-change 口径一致
+
+缺点：
+
+- 对下一轮 higher-layer skeleton 的指导不足
+
+风险：
+
+- 可能继续重复 3-B.16 的结论
+
+#### 方案 B：允许 internal surfaced signal，但不改外部行为
+
+优点：
+
+- 更贴近 runtime-visible gating 的真实用途
+- 能帮助 future higher-layer boundary 持有 detector classification 更久一点
+- 仍然不会触碰 public behavior
+
+缺点：
+
+- 需要更明确的文档和测试规划去钉住禁止项
+
+风险：
+
+- 如果边界失控，会继续滑向 control-flow 变化
+
+#### 方案 C：允许 detector result 开始影响控制流
+
+优点：
+
+- 推进快
+
+缺点：
+
+- 一旦影响控制流，就已经不是 runtime-visible gating，而是 runtime behavior change
+
+风险：
+
+- 会污染 parser / response_guard / API / error surface
+
+#### 推荐结论
+
+推荐 **方案 B**，但仍然只限 internal-only 范围。
+
+future 最小 runtime-visible gating 后，允许的行为最多包括：
+
+- internal higher-layer boundary 携带 detector gate signal
+- internal decision boundary 读取 detector classification
+- 为 future error-surface mapping 提供证据
+
+此阶段绝对禁止的行为包括：
+
+- API schema / API body 改变
+- runtime exception surface 改变
+- parser/content_parse 分支变化
+- response_guard 被 detector 结果改写
+- browser/js/fallback/retry 行为触发
+- detector 结果直接控制业务流程
+
+这些禁止项应继续通过两类方式钉住：
+
+- 文档：明确写“runtime-visible gating != runtime-visible behavior”
+- 测试规划：继续要求 no-behavior-change / no-surface-change / no-parser-branch-change
+
+不推荐方案 A 的原因：
+
+- 对下一轮 minimal runtime-visible skeleton 的指导不够
+
+不推荐方案 C 的原因：
+
+- 已经越界进入 runtime behavior 变化
+
+### 28.5 决策 4：错误码何时可以真正接近 runtime surface
+
+#### 方案 A：runtime-visible gating skeleton 一落地就允许部分 detector 错误码升级
+
+优点：
+
+- 口径简单
+
+缺点：
+
+- 与当前 `adapter_modeled` 口径冲突
+- 会把 higher-layer internal carrying 误写成 runtime actually raises
+
+风险：
+
+- 最容易把 challenge/gateway 写成线上已支持
+
+#### 方案 B：允许更高层 internal carrying，但仍不升级为 runtime-implemented
+
+优点：
+
+- 能承认 future higher-layer boundary 比 3-B.16 更进一步
+- 同时保持错误码状态不越界
+
+缺点：
+
+- 需要把 higher-layer carrying 与错误码 lifecycle 明确拆开
+
+风险：
+
+- 如果表达不清，仍会引起误读
+
+#### 方案 C：只有真正 runtime-visible behavior change 且可稳定复现后才升级
+
+优点：
+
+- 与当前文档体系和仓库事实最一致
+- 最能防止阶段误导
+
+缺点：
+
+- 状态升级更保守
+
+风险：
+
+- 需要继续接受“错误码状态暂不升级”的约束
+
+#### 推荐结论
+
+推荐 **方案 C**，同时接受 **方案 B** 的概念层结论：
+
+- future runtime-visible gating 可以允许更高层 internal carrying
+- 但 challenge/gateway 错误码 lifecycle 仍然 **不因此升级**
+
+也就是说：
+
+- `recommended only`
+- `internal observed`
+- `internal carried`
+- `internal surfaced near runtime`
+
+这些都只能作为 future runtime-visible 行为语义，不应被写成新的错误码 lifecycle 状态。
+
+因此 challenge/gateway 当前继续保持：
+
+- `adapter_modeled`
+
+只有同时满足以下条件后，才允许 future 真正接近 runtime surface：
+
+1. 哪类 internal gate result 允许 first become runtime-visible 已被单独决策
+2. runtime-visible gating 与 error surface / API / parser 的关系已冻结
+3. public behavior 变化已被单独评估并可稳定复现
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+不推荐方案 A 的原因：
+
+- 会直接破坏错误码状态体系
+
+不推荐方案 B 的原因：
+
+- 只可作为行为语义结论，不应被误写成 lifecycle 升级
+
+### 28.6 决策 5：下一轮最小可执行任务是什么
+
+#### 方案 A：继续只做 runtime-visible 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 当前 runtime-visible boundary 已足够清楚，继续纯文档会明显重复
+
+风险：
+
+- 推进停滞
+
+#### 方案 B：进入 minimal runtime-visible gating skeleton 实现（仅更高层 internal carrying）
+
+优点：
+
+- 仍然不进入 runtime-visible behavior
+- 能把 3-B.17 的边界结论收敛成最小 higher-layer internal boundary contract
+- 最利于证明：
+  - detector gate result 可以更高层可见
+  - external behavior 仍零变化
+
+缺点：
+
+- 需要极严范围控制
+
+风险：
+
+- 如果把 higher-layer carrying 写成 public behavior 变化，就会越界
+
+#### 方案 C：直接进入 detector 结果影响 runtime 的最小实装
+
+优点：
+
+- 推进快
+
+缺点：
+
+- 当前仍缺 error surface / API / parser 接缝冻结
+- 当前仍缺 public no-regression 证据
+- 当前仍缺哪些结果允许 first become runtime-visible 的正式证据链
+
+风险：
+
+- 会直接跨进 runtime-visible behavior change
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小集合应固定为：
+
+- 一个更高层 internal runtime-visible gate boundary contract
+- 一个 source-engine 邻接的 higher-layer carrying helper
+- detector gate result 的 internal surfaced-near-runtime carrying
+- 仍然不改返回值、不改异常、不改 parser、不改 response_guard
+- 对应的 no-behavior-change / no-surface-change 测试
+
+下一轮建议阶段名为：
+
+- **Phase 3-B.18：detector runtime-visible minimal gating skeleton 实现**
+
+当前不推荐直接进入 runtime-visible behavior change，原因是：
+
+- 仍缺 runtime-visible boundary 与 external behavior 的明确映射
+- 仍缺 public behavior change 的独立决策轮
+- 仍缺 challenge/gateway visible behavior 的稳定验证
+
+### 28.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**。
+
+原因：
+
+- 当前 minimal gating skeleton 已足够证明 detector result 到达 internal gate-layer
+- 当前最危险的歧义是 runtime-visible 会不会被误写成 behavior 已生效
+- 本轮已经足够决定下一轮能否安全进入 minimal runtime-visible gating skeleton
+
+#### Step 2：如果主张本轮必须落代码，是否已有充分证明
+
+结论：**没有**。
+
+当前无法证明：
+
+- 不落代码会阻塞 3-B.17
+- 需要落的代码已小到不可再小
+- 新增代码不会构成 runtime-visible behavior
+- 新增代码不会影响既有链路
+
+因此 3-B.17 正确停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 runtime-visible gating skeleton 实装。

@@ -87,6 +87,55 @@
 | fetch early-raise 兼容策略 | 3-B.8 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future exception-to-summary / fetch-outcome adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | error-outcome seam 测试规划 |
 | challenge/gateway 错误码 runtime 升级条件 | 3-B.8 | decision-fixed | not implemented | 文档已固定 | 未暴露 | 文档层 gate，future live detector path | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 正负样本 + live seam 回归规划 |
 | 下一轮最小 detector 任务占位 | 3-B.8 | decision-fixed | not implemented | 推荐转 3-B.9 detector live seam skeleton 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| exception-to-summary contract | 3-B.9 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future `FetchOutcomeSummaryBase/Success/Error` contract layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | dual-path contract 测试规划 |
+| dual-path summary field set | 3-B.9 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future summary contract layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | shared/optional field fixture 规划 |
+| thin coordinator/adapter boundary | 3-B.9 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future thin coordinator / adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | seam boundary / no-regression 测试规划 |
+| detector live seam skeleton decision | 3-B.9 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future `source_engine.py` adjacent seam adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | internal seam skeleton 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.9 | decision-fixed | not implemented | 推荐转 3-B.10 detector live seam skeleton 最小内部结构实装 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| fetch outcome summary base schema | 3-B.10 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_live_seam.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| fetch success summary | 3-B.10 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_live_seam.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| fetch error summary | 3-B.10 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_live_seam.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| live seam helper skeleton | 3-B.10 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/live_seam_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| dual-path seam fixtures | 3-B.10 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_live_seam_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| live seam contract tests | 3-B.10 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/test_online_detector_live_seam_contract.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| 下一轮最小 detector 任务占位 | 3-B.10 | decision-fixed | not implemented | 推荐转 3-B.11 detector live seam adapter 接入前决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| adapter responsibility boundary | 3-B.11 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future live seam adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | adapter boundary 测试规划 |
+| adapter pre-integration decision | 3-B.11 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future live seam adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | adapter pre-integration 测试规划 |
+| adapter input/output contract sufficiency | 3-B.11 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future adapter + detector contract bridge | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | adapter skeleton contract 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.11 | decision-fixed | not implemented | 推荐转 3-B.12 detector live seam adapter 最小内部 skeleton 实装 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| adapter input contract | 3-B.12 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_adapter.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_adapter_contract.py` |
+| adapter output contract | 3-B.12 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_adapter.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_adapter_contract.py` |
+| adapter no-op helper skeleton | 3-B.12 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_adapter_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_adapter_contract.py` |
+| adapter fixtures | 3-B.12 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_adapter_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_adapter_contract.py` |
+| adapter contract / no-op tests | 3-B.12 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/test_online_detector_adapter_contract.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_adapter_contract.py` |
+| 下一轮最小 detector 任务占位 | 3-B.12 | decision-fixed | not implemented | 推荐转 3-B.13 detector live seam adapter 最小接入决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| minimal live-entry boundary | 3-B.13 | decision-fixed | not implemented | 文档已固定为 internal no-op wiring + internal observation | 未暴露 | future `source_engine.py` seam caller -> thin live-entry helper | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | live-entry boundary / no-behavior-change 测试规划 |
+| minimal wiring point decision | 3-B.13 | decision-fixed | not implemented | 文档已固定为 `source_engine.py` 邻接 thin helper/coordinator | 未暴露 | future `source_engine.py` seam + thin helper/coordinator | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | live-entry wiring / no-regression 测试规划 |
+| adapter live-entry allowed/disallowed behaviors | 3-B.13 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future live-entry helper + adapter no-op path | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | behavior boundary / no-surface-change 测试规划 |
+| detector 错误码接近 runtime 的门槛 | 3-B.13 | decision-fixed | not implemented | challenge/gateway 继续保持 `adapter_modeled` | 未暴露 | `LEGADO_ANTI_BOT_CHALLENGE`, `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` lifecycle gate | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | error-code gate / no-upgrade 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.13 | decision-fixed | not implemented | 推荐转 3-B.14 detector live seam adapter 最小 live-entry skeleton 实现 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| live-entry skeleton helper | 3-B.14 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_live_entry_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_entry_skeleton.py` |
+| source_engine 邻接 live-entry 调用点 | 3-B.14 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_entry_skeleton.py` |
+| internal live-entry observation | 3-B.14 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_live_entry_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_live_entry_skeleton.py` |
+| live-entry fixtures | 3-B.14 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_live_entry_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_live_entry_skeleton.py` |
+| no-behavior-change / boundary tests | 3-B.14 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/test_online_detector_live_entry_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_live_entry_skeleton.py` |
+| 下一轮最小 detector 任务占位 | 3-B.14 | decision-fixed | not implemented | 推荐转 3-B.15 detector live behavior gating 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| behavior gating decision | 3-B.15 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future gate-layer internal signal / no-op decision | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | gating boundary / no-behavior-change 测试规划 |
+| minimal impact layer decision | 3-B.15 | decision-fixed | not implemented | 文档已固定为 future `internal surfaced signal` 上限 | 未暴露 | future gate-layer contract | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | internal signal carrying 测试规划 |
+| detector 错误码 gating 升级门槛 | 3-B.15 | decision-fixed | not implemented | challenge/gateway 继续保持 `adapter_modeled` | 未暴露 | future gate-layer -> runtime surface gate | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | no-upgrade / no-surface-change 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.15 | decision-fixed | not implemented | 推荐转 3-B.16 detector live behavior minimal gating skeleton 实现 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| gate input contract | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| gate result / signal / noop decision contract | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| minimal gating helper | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_gating_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| source_engine 邻接 gating 调用点 | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| internal signal carrying | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_gating_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| gating fixtures | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_gating_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| no-behavior-change / no-surface-change tests | 3-B.16 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/test_online_detector_gating_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| 下一轮最小 detector 任务占位 | 3-B.16 | decision-fixed | not implemented | 推荐转 3-B.17 detector runtime-visible gating 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| runtime-visible gating decision | 3-B.17 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future higher-layer internal runtime-visible boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | runtime-visible boundary / no-behavior-change 测试规划 |
+| minimal visible layer decision | 3-B.17 | decision-fixed | not implemented | 文档已固定为 future higher-layer `internal decision boundary` 上限 | 未暴露 | future runtime-visible gate boundary contract | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | higher-layer carrying 测试规划 |
+| detector 错误码 runtime-visible 升级门槛 | 3-B.17 | decision-fixed | not implemented | challenge/gateway 继续保持 `adapter_modeled` | 未暴露 | future runtime-visible gate -> runtime surface gate | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | no-upgrade / no-surface-change 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.17 | decision-fixed | not implemented | 推荐转 3-B.18 detector runtime-visible minimal gating skeleton 实现 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
 | anti_bot_detector 分层 | 3-B.1 | decision-fixed | not implemented | 未正式支持 | 未暴露 | `anti_bot_detector` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | gateway / challenge / suspicious HTML 规划测试 |
 | 第一批 3-B 错误码选择 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | 复杂请求 / 基础反爬 | 3-B | 已设计 | 未实现 | 未正式支持 | 未暴露 | `anti_bot_handler` 预留 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 未实现 |
@@ -105,6 +154,14 @@
 | L3-D.1 | detector static skeleton contracts | decision-fixed / not implemented | future detector input/result contract layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | contract / fixture / golden test 规划 |
 | L3-D.2 | detector offline static skeleton | implemented (offline only) | `backend/app/schemas/online_detector.py`, `backend/app/services/online/detector_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_skeleton.py` |
 | L3-D.3 | detector live seam decision | decision-fixed / not implemented | future `source_engine.py` seam + thin coordinator / fetch-outcome adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | live seam contract / no-regression 测试规划 |
+| L3-D.4 | detector live seam skeleton contract | implemented (internal only) | `backend/app/schemas/online_live_seam.py`, `backend/app/services/online/live_seam_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_live_seam_contract.py` |
+| L3-D.5 | detector live seam adapter pre-integration decision | decision-fixed / not implemented | future `source_engine.py` caller -> thin adapter -> detector result seam | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | adapter boundary / no-regression 测试规划 |
+| L3-D.6 | detector live seam adapter internal skeleton | implemented (internal only) | `backend/app/schemas/online_detector_adapter.py`, `backend/app/services/online/detector_adapter_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_adapter_contract.py` |
+| L3-D.7 | detector live seam adapter minimal live-entry decision | decision-fixed / not implemented | future `source_engine.py` seam -> thin live-entry helper -> adapter no-op path | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | live-entry boundary / no-behavior-change 测试规划 |
+| L3-D.8 | detector live seam adapter minimal live-entry skeleton | implemented (internal only) | `backend/app/services/online/detector_live_entry_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_live_entry_skeleton.py` |
+| L3-D.9 | detector live behavior gating decision | decision-fixed / not implemented | future gate-layer internal signal / no-op decision | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | gating boundary / no-surface-change 测试规划 |
+| L3-D.10 | detector live behavior minimal gating skeleton | implemented (internal only) | `backend/app/schemas/online_detector_gate.py`, `backend/app/services/online/detector_gating_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
+| L3-D.11 | detector runtime-visible gating decision | decision-fixed / not implemented | future higher-layer internal boundary near runtime surface | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | runtime-visible boundary / no-surface-change 测试规划 |
 | L4 | JS 依赖能力 | deferred to 3-C | `js_execution_sandbox` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 | L5 | 浏览器态 / WebView | deferred to 3-D | `browser_fallback_service` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 
@@ -162,8 +219,12 @@
 | detector sample fixtures | implemented / offline only |
 | detector static skeleton | implemented / offline only |
 | detector live seam | decision-fixed / not implemented |
+| dual-path summary contract | implemented / internal only |
+| thin coordinator boundary | decision-fixed / not implemented |
+| adapter responsibility boundary | decision-fixed / not implemented |
+| adapter internal skeleton | implemented / internal only |
 | detector error-code runtime upgrade gate | decision-fixed / not implemented |
-| challenge / gateway detector candidates | skeleton-modeled / offline only |
+| challenge / gateway detector candidates | adapter-modeled / internal only |
 | suspicious HTML detector candidate | documented only / not implemented |
 | anti-bot detection | decision-fixed / not implemented |
 | anti-bot bypass | not formally supported |
@@ -295,3 +356,197 @@
 7. 本轮仍然只修改文档，不触碰任何 live runtime 代码路径
 8. 下一轮最小任务已明确收敛为：
    - `Phase 3-B.9` detector live seam skeleton 决策轮
+
+当前 3-B.9 detector live seam skeleton 决策轮的最小验收链为：
+
+1. 已再次核查 success path 与 error path 的真实信息可见性差异
+2. `exception-to-summary` 最小 contract 已固定为：
+   - `FetchOutcomeSummaryBase`
+   - `FetchSuccessSummary`
+   - `FetchErrorSummary`
+3. dual-path 最小字段集已固定为：
+   - shared required fields
+   - optional path-specific fields
+   - 禁止完整 response/body 进入 summary
+4. `source_engine -> thin coordinator/adapter` 的最小边界已固定
+5. detector live seam 的最小可接入点已继续固定为：
+   - `source_engine.py` 邻接的 thin adapter/coordinator seam
+6. 当前仍然没有任何 live hook / live detector runtime 代码落地
+7. 本轮仍然只修改文档，不触碰任何 runtime 路径
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.10` detector live seam skeleton 最小内部结构实装
+
+当前 3-B.10 detector live seam skeleton 最小内部结构实装的最小验收链为：
+
+1. `backend/app/schemas/online_live_seam.py` 已存在
+2. `backend/app/services/online/live_seam_skeleton.py` 已存在
+3. `backend/tests/fixtures/online_detector_live_seam_samples.json` 已存在
+4. `backend/tests/test_online_detector_live_seam_contract.py` 已覆盖：
+   - base/success/error summary schema
+   - required/optional 字段
+   - helper skeleton
+   - dual-path fixture 消费
+   - 未接入 live runtime 的边界测试
+5. helper 当前仍然只接受内部 stub/mapping
+6. `fetch_service.py` / `source_engine.py` 没有接入 live seam skeleton
+7. 3-B.2 / 3-B.3 / 3-B.7 与 online/import 回归继续通过
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.11` detector live seam adapter 接入前决策轮
+
+当前 3-B.11 detector live seam adapter 接入前决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `fetch_service.py`
+   - `response_guard_service.py`
+   - `source_engine.py`
+   - `online_live_seam.py`
+   - `live_seam_skeleton.py`
+   - `detector_skeleton.py`
+2. future adapter 的最小职责已固定为：
+   - summary -> detector input -> detector result 衔接
+3. future adapter 的非职责已固定为：
+   - retry/fallback
+   - response_guard
+   - parser/content_parse
+   - runtime error surface 最终决策
+   - browser/js fallback
+   - anti-bot bypass
+4. adapter 与现有层的单向边界已固定为：
+   - 仅由 `source_engine.py` 调用
+   - 不嵌入 `fetch_service.py` / `response_guard_service.py`
+5. 当前 contract 充足性已明确：
+   - 足够支持最小 adapter skeleton
+   - 不足以支持 live adapter 接入
+6. detector 候选错误码升级门槛继续保持不变
+7. 本轮仍然只修改文档，不触碰任何 runtime 路径
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.12` detector live seam adapter 最小内部 skeleton 实装
+
+当前 3-B.12 detector live seam adapter 最小内部 skeleton 实装的最小验收链为：
+
+1. `backend/app/schemas/online_detector_adapter.py` 已存在
+2. `backend/app/services/online/detector_adapter_skeleton.py` 已存在
+3. `backend/tests/fixtures/online_detector_adapter_samples.json` 已存在
+4. `backend/tests/test_online_detector_adapter_contract.py` 已覆盖：
+   - adapter input/output contract
+   - no-op helper
+   - adapter fixtures
+   - live 零接入边界
+5. adapter 当前仍然只是内部 no-op skeleton
+6. `source_engine.py` / `fetch_service.py` / `response_guard_service.py` 没有接入 adapter
+7. 3-B.10 / 3-B.7 / 3-B.3 与 online/import 回归继续通过
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.13` detector live seam adapter 最小接入决策轮
+
+当前 3-B.13 detector live seam adapter 最小接入决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `fetch_service.py`
+   - `response_guard_service.py`
+   - `source_engine.py`
+   - `online_live_seam.py`
+   - `live_seam_skeleton.py`
+   - `online_detector_adapter.py`
+   - `detector_adapter_skeleton.py`
+2. future minimal live entry 已固定为：
+   - internal no-op wiring
+   - internal observation only
+3. future 最小 wiring 点已固定为：
+   - `source_engine.py` 邻接的 thin helper/coordinator
+   - 而不是 `fetch_service.py`
+4. allowed / disallowed behaviors 已固定为：
+   - 允许 adapter input/output 内部流转
+   - 不允许 public behavior / error surface / parser / fallback 变化
+5. challenge/gateway 错误码升级门槛已继续保持：
+   - 当前仍然只到 `adapter_modeled`
+   - minimal live entry 决策本身不构成升级条件
+6. 本轮仍然只修改文档，不触碰任何 runtime 路径
+7. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.14` detector live seam adapter 最小 live-entry skeleton 实现
+
+当前 3-B.14 detector live seam adapter 最小 live-entry skeleton 实现的最小验收链为：
+
+1. `backend/app/services/online/detector_live_entry_skeleton.py` 已存在
+2. `backend/app/services/online/source_engine.py` 已存在 source-engine 邻接调用点
+3. `backend/tests/fixtures/online_detector_live_entry_samples.json` 已存在
+4. `backend/tests/test_online_detector_live_entry_skeleton.py` 已覆盖：
+   - success path internal wiring
+   - error path internal wiring
+   - challenge/gateway/no-match internal observation
+   - no-behavior-change
+   - boundary isolation
+5. live-entry observation 当前仍然只停留在 internal-only 层
+6. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+7. detector 候选错误码状态没有升级为 `runtime-implemented`
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.15` detector live behavior gating 决策轮
+
+当前 3-B.15 detector live behavior gating 决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `detector_live_entry_skeleton.py`
+   - `source_engine.py`
+   - `detector_adapter_skeleton.py`
+   - `live_seam_skeleton.py`
+   - `fetch_service.py`
+   - `response_guard_service.py`
+2. 当前 detector result 到达层级已固定为：
+   - internal observation only
+3. future minimal impact layer 已固定为：
+   - future `internal surfaced signal`
+   - 但仍非 runtime-visible layer
+4. allowed / disallowed gating behaviors 已固定：
+   - 允许 internal signal carrying / no-op gate decision
+   - 禁止 API / exception / parser / response_guard / fallback 变化
+5. challenge/gateway 错误码 gating 门槛已继续保持：
+   - 当前仍然只到 `adapter_modeled`
+   - gating 决策本身不构成升级条件
+6. 本轮仍然只修改文档，不触碰任何 runtime 路径
+7. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.16` detector live behavior minimal gating skeleton 实现
+
+当前 3-B.16 detector live behavior minimal gating skeleton 实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector_gate.py` 已存在
+2. `backend/app/services/online/detector_gating_skeleton.py` 已存在
+3. `backend/app/services/online/source_engine.py` 已存在 source-engine 邻接 gating 调用点
+4. `backend/tests/fixtures/online_detector_gating_samples.json` 已存在
+5. `backend/tests/test_online_detector_gating_skeleton.py` 已覆盖：
+   - gate contract
+   - candidate / no-match / noop cases
+   - internal signal carrying
+   - no-behavior-change
+   - no-surface-change
+   - boundary isolation
+6. gate result 当前仍然只停留在 internal-only 层
+7. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+8. detector 候选错误码状态没有升级为 `runtime-implemented`
+9. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.17` detector runtime-visible gating 决策轮
+
+当前 3-B.17 detector runtime-visible gating 决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `detector_gating_skeleton.py`
+   - `detector_live_entry_skeleton.py`
+   - `detector_adapter_skeleton.py`
+   - `live_seam_skeleton.py`
+   - `fetch_service.py`
+   - `response_guard_service.py`
+   - `source_engine.py`
+2. 当前 detector result 到达层级已固定为：
+   - internal observation
+   - internal signal carrying
+   - no-op gate decision
+3. future 最小 runtime-visible 上限已固定为：
+   - future higher-layer `internal decision boundary`
+   - 但仍非 public response / public exception layer
+4. allowed / disallowed runtime-visible behaviors 已固定：
+   - 允许 higher-layer internal carrying / observation
+   - 禁止 API / exception / parser / response_guard / fallback 变化
+5. challenge/gateway 错误码 runtime-visible 门槛已继续保持：
+   - 当前仍然只到 `adapter_modeled`
+   - runtime-visible gating 决策本身不构成升级条件
+6. 本轮仍然只修改文档，不触碰任何 runtime 路径
+7. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.18` detector runtime-visible minimal gating skeleton 实现

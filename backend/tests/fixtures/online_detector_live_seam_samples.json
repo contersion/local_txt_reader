@@ -1,0 +1,98 @@
+[
+  {
+    "sample_id": "success-search-html-ok",
+    "expected_summary_model": "FetchSuccessSummary",
+    "payload": {
+      "stage": "search",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/search?q=test",
+      "fetch_outcome_kind": "success",
+      "final_url": "https://books.example/search?q=test",
+      "status_code": 200,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": false,
+      "body_text_preview": "<html><body>ok</body></html>",
+      "body_text_length": 28
+    }
+  },
+  {
+    "sample_id": "success-detail-challenge-like-200",
+    "expected_summary_model": "FetchSuccessSummary",
+    "payload": {
+      "stage": "detail",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/detail/123",
+      "fetch_outcome_kind": "success",
+      "final_url": "https://books.example/challenge",
+      "status_code": 200,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": true,
+      "body_text_preview": "<html><title>Checking your browser</title><body>Checking your browser before accessing the site.</body></html>",
+      "body_text_length": 111
+    }
+  },
+  {
+    "sample_id": "error-http-403-with-body-preview",
+    "expected_summary_model": "FetchErrorSummary",
+    "payload": {
+      "stage": "catalog",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/catalog/123",
+      "fetch_outcome_kind": "http_error",
+      "status_code": 403,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": false,
+      "body_text_preview": "<html><title>Access denied</title><body>Access denied by security rules.</body></html>",
+      "body_text_length": 88
+    }
+  },
+  {
+    "sample_id": "error-http-429-with-body-preview",
+    "expected_summary_model": "FetchErrorSummary",
+    "payload": {
+      "stage": "search",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/search?q=test",
+      "fetch_outcome_kind": "http_error",
+      "status_code": 429,
+      "content_type": "text/html; charset=utf-8",
+      "redirected": false,
+      "body_text_preview": "<html><title>Rate limited</title><body>Too many requests.</body></html>",
+      "body_text_length": 73
+    }
+  },
+  {
+    "sample_id": "error-http-503-no-body-preview",
+    "expected_summary_model": "FetchErrorSummary",
+    "payload": {
+      "stage": "content",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/content/123",
+      "fetch_outcome_kind": "http_error",
+      "status_code": 503
+    }
+  },
+  {
+    "sample_id": "error-transport-timeout",
+    "expected_summary_model": "FetchErrorSummary",
+    "payload": {
+      "stage": "detail",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/detail/999",
+      "fetch_outcome_kind": "transport_error",
+      "exception_kind": "timeout"
+    }
+  },
+  {
+    "sample_id": "error-transport-request-error",
+    "expected_summary_model": "FetchErrorSummary",
+    "payload": {
+      "stage": "content",
+      "expected_response_type": "html",
+      "requested_url": "https://books.example/content/999",
+      "fetch_outcome_kind": "transport_error",
+      "exception_kind": "request_error",
+      "final_url": "https://books.example/content/999"
+    }
+  }
+]

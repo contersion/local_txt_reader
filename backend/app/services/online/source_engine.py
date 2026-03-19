@@ -17,6 +17,11 @@ from app.services.online.content_parse_service import (
     parse_detail_preview,
     parse_search_preview,
 )
+from app.services.online.detector_gating_skeleton import evaluate_detector_behavior_gate_noop
+from app.services.online.detector_live_entry_skeleton import (
+    observe_live_entry_from_fetch_error,
+    observe_live_entry_from_success_response,
+)
 from app.services.online.fetch_service import FetchServiceError, fetch_stage_response
 from app.services.online.online_sources import get_online_source
 from app.services.online.parser_engine import ParserEngineError
@@ -53,7 +58,12 @@ def preview_search(
             stage_definition=stage_definition,
             placeholders={"keyword": keyword, "page": str(page)},
         )
-        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
+        raw_response = _execute_stage(
+            stage="search",
+            stage_request=stage_request,
+            auth_config=auth_config,
+            session_context=session_context,
+        )
         return parse_search_preview(
             source_id=source.id,
             source_name=source.name,
@@ -84,7 +94,12 @@ def preview_detail(
             stage_definition=stage_definition,
             placeholders={"detail_url": detail_url},
         )
-        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
+        raw_response = _execute_stage(
+            stage="detail",
+            stage_request=stage_request,
+            auth_config=auth_config,
+            session_context=session_context,
+        )
         return parse_detail_preview(
             source_id=source.id,
             source_name=source.name,
@@ -116,7 +131,12 @@ def preview_catalog(
             stage_definition=stage_definition,
             placeholders={"catalog_url": catalog_url},
         )
-        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
+        raw_response = _execute_stage(
+            stage="catalog",
+            stage_request=stage_request,
+            auth_config=auth_config,
+            session_context=session_context,
+        )
         return parse_catalog_preview(
             raw_response=raw_response,
             stage_definition=stage_definition,
@@ -146,7 +166,12 @@ def preview_chapter(
             stage_definition=stage_definition,
             placeholders={"chapter_url": chapter_url},
         )
-        raw_response = _execute_stage(stage_request, auth_config=auth_config, session_context=session_context)
+        raw_response = _execute_stage(
+            stage="content",
+            stage_request=stage_request,
+            auth_config=auth_config,
+            session_context=session_context,
+        )
         return parse_chapter_preview(
             raw_response=raw_response,
             stage_definition=stage_definition,
@@ -185,6 +210,7 @@ def _build_stage_request(
 
 
 def _execute_stage(
+    stage: str,
     stage_request: dict[str, Any],
     *,
     auth_config: OnlineAuthConfig | None = None,
@@ -197,15 +223,71 @@ def _execute_stage(
         auth_config=auth_config,
         session_context=session_context,
     )
-    return fetch_stage_response(
-        method=request_profile.method,
-        url=request_profile.url,
-        response_type=request_profile.response_type,
-        headers=request_profile.headers,
-        query=request_profile.query,
-        body=request_profile.body,
-        cookies=request_profile.cookies,
+    try:
+        raw_response = fetch_stage_response(
+            method=request_profile.method,
+            url=request_profile.url,
+            response_type=request_profile.response_type,
+            headers=request_profile.headers,
+            query=request_profile.query,
+            body=request_profile.body,
+            cookies=request_profile.cookies,
+        )
+    except FetchServiceError as exc:
+        # Internal-only live-entry skeleton. The observation result is
+        # intentionally discarded so Phase 3-B.14 can prove wiring exists
+        # without changing error surfaces or public behavior.
+        _observe_live_entry_error_noop(
+            stage=stage,
+            expected_response_type=request_profile.response_type,
+            requested_url=request_profile.url,
+            error=exc,
+        )
+        raise
+
+    # Internal-only live-entry skeleton. The observation result is
+    # intentionally discarded so parser/API behavior stays unchanged.
+    _observe_live_entry_success_noop(
+        stage=stage,
+        expected_response_type=request_profile.response_type,
+        raw_response=raw_response,
     )
+    return raw_response
+
+
+def _observe_live_entry_success_noop(*, stage: str, expected_response_type: str, raw_response) -> None:
+    try:
+        adapter_output = observe_live_entry_from_success_response(
+            stage=stage,
+            expected_response_type=expected_response_type,
+            raw_response=raw_response,
+        )
+        _ = evaluate_detector_behavior_gate_noop(adapter_output)
+    except Exception:
+        # The live-entry skeleton is internal observation only. Any failure in
+        # this branch must not change the existing fetch -> parser behavior.
+        return
+
+
+def _observe_live_entry_error_noop(
+    *,
+    stage: str,
+    expected_response_type: str,
+    requested_url: str,
+    error: FetchServiceError,
+) -> None:
+    try:
+        adapter_output = observe_live_entry_from_fetch_error(
+            stage=stage,
+            expected_response_type=expected_response_type,
+            requested_url=requested_url,
+            error=error,
+        )
+        _ = evaluate_detector_behavior_gate_noop(adapter_output)
+    except Exception:
+        # The live-entry skeleton is internal observation only. Any failure in
+        # this branch must not change the existing error surface.
+        return
 
 
 def _render_mapping(mapping: dict[str, str], placeholders: dict[str, str]) -> dict[str, str]:

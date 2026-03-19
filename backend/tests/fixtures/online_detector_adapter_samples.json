@@ -1,0 +1,141 @@
+[
+  {
+    "sample_id": "success-summary-to-adapter-input",
+    "sample_kind": "adapter_input",
+    "expected_model": "DetectorAdapterInput",
+    "payload": {
+      "stage": "search",
+      "expected_response_type": "html",
+      "fetch_outcome_summary": {
+        "stage": "search",
+        "expected_response_type": "html",
+        "requested_url": "https://books.example/search?q=test",
+        "fetch_outcome_kind": "success",
+        "final_url": "https://books.example/search?q=test",
+        "status_code": 200
+      }
+    }
+  },
+  {
+    "sample_id": "error-summary-to-adapter-input",
+    "sample_kind": "adapter_input",
+    "expected_model": "DetectorAdapterInput",
+    "payload": {
+      "stage": "content",
+      "expected_response_type": "html",
+      "fetch_outcome_summary": {
+        "stage": "content",
+        "expected_response_type": "html",
+        "requested_url": "https://books.example/content/123",
+        "fetch_outcome_kind": "transport_error",
+        "exception_kind": "timeout"
+      }
+    }
+  },
+  {
+    "sample_id": "success-summary-to-noop-output",
+    "sample_kind": "adapter_output",
+    "expected_model": "DetectorAdapterOutput",
+    "payload": {
+      "outcome": "noop",
+      "adapter_input": {
+        "stage": "search",
+        "expected_response_type": "html",
+        "fetch_outcome_summary": {
+          "stage": "search",
+          "expected_response_type": "html",
+          "requested_url": "https://books.example/search?q=test",
+          "fetch_outcome_kind": "success"
+        }
+      }
+    }
+  },
+  {
+    "sample_id": "challenge-candidate-to-prepared-output",
+    "sample_kind": "adapter_output",
+    "expected_model": "DetectorAdapterOutput",
+    "payload": {
+      "outcome": "detector_input_prepared",
+      "adapter_input": {
+        "stage": "detail",
+        "expected_response_type": "html",
+        "fetch_outcome_summary": {
+          "stage": "detail",
+          "expected_response_type": "html",
+          "requested_url": "https://books.example/detail/123",
+          "fetch_outcome_kind": "success",
+          "final_url": "https://books.example/challenge",
+          "status_code": 200
+        }
+      },
+      "detector_input": {
+        "stage": "detail",
+        "expected_response_type": "html",
+        "requested_url": "https://books.example/detail/123",
+        "final_url": "https://books.example/challenge",
+        "status_code": 200,
+        "content_type": "text/html; charset=utf-8",
+        "redirected": true,
+        "body_text_preview": "<html><title>Checking your browser</title></html>",
+        "body_text_length": 50
+      }
+    }
+  },
+  {
+    "sample_id": "gateway-result-attached-output",
+    "sample_kind": "adapter_output",
+    "expected_model": "DetectorAdapterOutput",
+    "payload": {
+      "outcome": "detector_result_attached",
+      "adapter_input": {
+        "stage": "catalog",
+        "expected_response_type": "html",
+        "fetch_outcome_summary": {
+          "stage": "catalog",
+          "expected_response_type": "html",
+          "requested_url": "https://books.example/catalog/123",
+          "fetch_outcome_kind": "http_error",
+          "status_code": 403
+        }
+      },
+      "detector_input": {
+        "stage": "catalog",
+        "expected_response_type": "html",
+        "requested_url": "https://books.example/catalog/123",
+        "final_url": "https://books.example/catalog/123",
+        "status_code": 403,
+        "content_type": "text/html; charset=utf-8",
+        "redirected": false,
+        "body_text_preview": "<html><title>Access denied</title></html>",
+        "body_text_length": 41
+      },
+      "detector_result": {
+        "category": "gateway_candidate",
+        "status": "candidate_match",
+        "matched_signals": ["gateway_access_denied"],
+        "evidence_snippets": ["gateway_access_denied :: access denied"],
+        "recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY",
+        "deferred_requirement_hint": "none"
+      }
+    }
+  },
+  {
+    "sample_id": "no-match-noop-output",
+    "sample_kind": "adapter_output",
+    "expected_model": "DetectorAdapterOutput",
+    "payload": {
+      "outcome": "noop",
+      "adapter_input": {
+        "stage": "content",
+        "expected_response_type": "html",
+        "fetch_outcome_summary": {
+          "stage": "content",
+          "expected_response_type": "html",
+          "requested_url": "https://books.example/content/999",
+          "fetch_outcome_kind": "http_error",
+          "status_code": 503
+        }
+      }
+    }
+  }
+]
