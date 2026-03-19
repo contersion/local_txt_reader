@@ -4,10 +4,10 @@
 
 本文档只服务于 **Phase 3-B 强约束设计阶段**。
 
-当前轮次进一步固定为：
+当前最新轮次进一步固定为：
 
-- `Phase 3-B.1`：实装前决策轮
-- 默认结论：只做决策、文档、Traceability、错误码分层更新
+- `Phase 3-B.8`：detector live 接缝决策轮
+- 默认结论：只做决策、文档、Traceability、错误码分层与测试规划
 - 默认不改代码
 
 当前目标不是实现复杂请求运行时，而是：
@@ -31,6 +31,9 @@
 - `Phase 3-B.2`：最小 preflight 实装
 - `Phase 3-B.3`：generic response_guard 最小分类实装
 - `Phase 3-B.4`：response_guard 扩展前决策轮（文档/决策层）
+- `Phase 3-B.5`：detector / anti-bot 边界设计轮（文档/决策层）
+- `Phase 3-B.6`：detector 最小静态分类骨架决策轮（文档/决策层）
+- `Phase 3-B.7`：detector 最小静态分类骨架实现（纯内部、纯离线）
 
 但该实现仍然严格限定在：
 
@@ -46,6 +49,7 @@
 - detector / anti-bot 实装
 - suspicious HTML / challenge / gateway detection
 - JS / WebView / browser fallback 实装
+- detector live runtime 接入
 
 ## 2. 当前仓库请求执行链扫描结论
 
@@ -920,3 +924,918 @@ detector 当前 **不** 应负责：
 当前阶段口径必须保持为：
 
 > Phase 3-B.5 仅完成 detector / anti-bot 边界设计，仓库尚未进入 detector 实装，尚未进入 anti-bot bypass，尚未进入 3-C / 3-D。
+
+## 17. 3-B.6 detector 最小静态分类骨架决策轮结论
+
+### 17.1 当前 detector 仍然缺什么
+
+基于当前仓库，detector 仍然缺少四个最小骨架定义：
+
+- 稳定输入契约
+- 稳定输出契约
+- first-batch sample matrix
+- challenge / gateway 的最小 generic heuristic 边界
+
+并且当前仓库还有一个直接影响 detector 设计的现实限制：
+
+- `fetch_service.py` 在 `response.status_code >= 400` 时会直接抛错
+- 这意味着 future detector 不能简单被设计成“只消费成功返回的 `RawFetchResponse`”
+- 如果未来 detector 要覆盖 `403/503` 这类 challenge / gateway HTML block pages，就必须先有一个不直接绑定 `httpx.Response`、也不只依赖成功路径 `RawFetchResponse` 的中间输入契约
+
+因此，本轮比 heuristic 代码更优先的工作，是把静态骨架先在设计层定死。
+
+### 17.2 detector 输入契约推荐
+
+当前不推荐把 detector 直接绑定为：
+
+- 完整 `httpx.Response`
+- 或 parser 层已经语义化后的高层对象
+
+本轮推荐 future detector 输入契约采用：
+
+- **normalized detection input**
+
+它应由两层组成：
+
+1. `request/stage context`
+2. `response evidence summary`
+
+推荐的最小字段集合为：
+
+- `stage`
+  - `search | detail | catalog | content`
+- `expected_response_type`
+  - `html | json`
+- `requested_url`
+- `final_url`
+- `status_code`
+- `content_type`
+- `redirected`
+  - 基于 `requested_url != final_url`
+- `body_text_preview`
+  - 只保留受约束的文本摘要
+  - 推荐上限：`4096` 字符
+- `body_text_length`
+
+本轮不推荐在 first skeleton 中把以下内容作为必需输入：
+
+- 完整 header bag
+- 原始二进制 body
+- 完整 HTML DOM
+- parser 输出结果
+- 任意站点特有上下文
+
+原因：
+
+- 完整 `httpx.Response` 会把 detector 与 transport 实现绑死
+- 完整 body / DOM 会让 detector 更容易长成“大杂烩分析器”
+- parser 输出会把 detector 与语义解析层混在一起
+- 受约束的 `body_text_preview` 更适合 future heuristic 测试、回放、裁剪与样本治理
+
+关于 header：
+
+- 当前 first skeleton 只把 `content_type` 视为稳定输入
+- 未来若确有必要，再讨论一个极小 allowlist 的 `header_hints`
+- 但不应在本轮默认要求“保留完整 headers”
+
+### 17.3 detector 输出契约推荐
+
+当前不推荐 detector 直接输出：
+
+- 单一错误码
+- 或裸 `signal list`
+
+本轮推荐 future detector 输出契约采用：
+
+- **structured classification result**
+
+再由上层将其映射到稳定错误码。
+
+推荐的最小输出字段集合为：
+
+- `category`
+  - `challenge_candidate`
+  - `gateway_candidate`
+  - `suspicious_html_candidate`
+  - `browser_required_candidate`
+  - `js_required_candidate`
+  - `no_match`
+- `matched_signals`
+  - 稳定 signal id 列表
+- `evidence_snippets`
+  - 短文本证据片段
+  - 仅用于测试与 traceability
+- `recommended_error_code`
+  - 可为空
+- `status`
+  - `candidate`
+  - `documented_only`
+  - `deferred_to_3c`
+  - `deferred_to_3d`
+- `deferred_requirement_hint`
+  - 仅用于文档建模
+  - 例如：
+    - `js_runtime`
+    - `browser_runtime`
+    - `manual_review`
+    - `none`
+
+本轮不推荐在 first skeleton 中放入：
+
+- `retry plan`
+- `fallback plan`
+- `auto recovery action`
+- 数值型 `confidence`
+
+原因：
+
+- 直接错误码输出会丢失 traceability
+- 裸 signal list 会把错误码映射责任散落到多个上层
+- 恢复/绕过类字段极易被误解成“已支持自动处理”
+- `confidence` 在 first skeleton 阶段最难保证可测、可复现、可稳定
+
+### 17.4 first-batch sample matrix 推荐范围
+
+本轮推荐 first-batch sample matrix 的正向候选范围只覆盖：
+
+- challenge candidate
+- gateway / WAF interception candidate
+
+本轮不建议进入 first-batch 默认样本的项目：
+
+- suspicious HTML
+- browser-required
+- js-required
+
+原因分别是：
+
+- `suspicious HTML`
+  - 仍然最容易与 parser/stage/site semantics 混淆
+- `browser-required` / `js-required`
+  - 当前更适合作为 detector 输出中的 deferred capability hint
+  - 而不是 first-batch detector 样本目标
+
+但 first-batch matrix **仍然必须**包含负样本/对照样本，用于防止 challenge / gateway 误判。
+
+推荐样本字段最小集合：
+
+- `sample_id`
+- `stage`
+- `response_status`
+- `content_type`
+- `requested_url`
+- `final_url`
+- `body_snippet`
+- `expected_category`
+- `expected_error_code`
+- `expected_error_code_status`
+- `expected_matched_signals`
+- `notes`
+
+关于 stage：
+
+- stage 字段应成为所有样本的必填字段
+- 但 first-batch 不要求四个 stage 的正样本全覆盖
+- 更合理的最小做法是：
+  - challenge/gateway 正样本若干
+  - 外加跨 stage 的负样本/相似页样本
+
+推荐的 first-batch 样本组成是：
+
+- challenge positive samples
+- gateway positive samples
+- normal login page negative samples
+- normal error page negative samples
+- normal “no results”/空列表 negative samples
+
+这样才能避免 detector 一开始就只学会“关键词命中”而没有误判约束。
+
+### 17.5 challenge / gateway 的最小 generic heuristic 边界
+
+本轮固定第一轮 heuristic 只允许使用：
+
+- **极少数 generic signal bundles**
+
+而不是任意扩大到更多 pattern，更不是 site-specific 线索。
+
+#### challenge candidate 的最小 generic signals
+
+推荐只保留以下几类 signal bundle：
+
+- 标题/正文中的 human-verification 类短语组合
+  - 例如：
+    - `verify you are human`
+    - `human verification`
+    - `security check`
+    - `checking your browser`
+    - `enable javascript and cookies to continue`
+- 带有验证语义的交互控制组合
+  - challenge wording + form/button/checkbox/captcha 控件痕迹
+- 泛化的 path / final-url hint
+  - 例如包含：
+    - `/challenge`
+    - `/captcha`
+    - `/verify`
+  - 但它们只能作为辅助信号，不能单独成立
+
+#### gateway candidate 的最小 generic signals
+
+推荐只保留以下几类 signal bundle：
+
+- deny / intercept wording 组合
+  - 例如：
+    - `access denied`
+    - `request blocked`
+    - `blocked by security rules`
+    - `forbidden by security policy`
+- firewall / security-service wording 组合
+  - 例如：
+    - `security service`
+    - `firewall`
+    - `web application firewall`
+    - `protected by security rules`
+- 支撑性状态码组合
+  - `403`
+  - `503`
+  - 仅能作为辅助信号，不可单独成立
+- 支撑性 final-url/path hints
+  - 例如：
+    - `/blocked`
+    - `/denied`
+    - `/challenge`
+
+#### 第一轮明确不应纳入 generic 边界的内容
+
+- vendor brand names 作为核心规则
+  - 例如：
+    - `cloudflare`
+    - `akamai`
+    - `imperva`
+    - `incapsula`
+- 某个站点专有的表单结构
+- 某个站点专有的按钮文案
+- 单个关键词单独命中即判定 challenge/gateway
+
+#### 明确高误伤风险的模式
+
+以下模式虽然常见，但第一轮不应单独作为 detector 命中依据：
+
+- 单独出现 `verify`
+- 单独出现 `security`
+- 单独出现 `continue`
+- 普通登录页里的 captcha 控件
+- 普通 403/404/维护页
+- 普通“请登录后继续”页面
+
+结论：
+
+- 第一轮 heuristic 必须以**组合信号**为主
+- 不允许以**单词命中**或**站点私货**为主
+
+### 17.6 为什么本轮默认仍不进 detector 代码层
+
+#### Step 1：本轮只做文档、样本矩阵与决策是否已经足够
+
+结论：**足够**
+
+原因：
+
+- 当前最缺的是 detector skeleton contract，而不是 detector code shell
+- first-batch 样本范围与 heuristic 边界如果不先钉死，下一轮代码很难写得小而稳
+- 当前 `fetch_service.py` 的 `status_code >= 400` 早抛错行为，本身就说明“先定输入契约”比“先写 detector 代码”更重要
+
+#### Step 2：当前是否有充分证据证明必须落代码
+
+结论：**没有**
+
+当前没有充分证据表明：
+
+- 不落代码会阻塞下一轮
+- detector 空壳已经小到不可再小
+- 在输入/输出/sample matrix 尚未固定前，加代码不会造成阶段误导
+
+因此 3-B.6 默认停在文档层。
+
+### 17.7 下一步最小可执行任务
+
+本轮之后，最小、最稳妥的下一步建议是：
+
+- **Phase 3-B.7：detector 最小静态分类骨架实现（纯内部 schema/result/sample-fixture 层）**
+
+它应严格限制为：
+
+- 内部 detector input schema
+- 内部 detector output schema
+- challenge/gateway first-batch sample fixtures
+- 纯离线、纯静态、纯可单测的分类骨架
+
+它仍然不应包括：
+
+- live runtime hook
+- suspicious HTML heuristic
+- browser/js-required heuristic
+- anti-bot bypass
+- JS / browser fallback
+
+当前阶段口径必须保持为：
+
+> Phase 3-B.6 仅完成 detector 最小静态分类骨架决策，仓库尚未进入 detector / anti-bot 实装，尚未进入 3-C / 3-D。
+
+## 18. 3-B.7 已落地的 detector 最小静态分类骨架
+
+### 18.1 当前已落地什么
+
+当前仓库已经以纯内部、纯离线、纯可单测的方式落地了：
+
+- 内部 detector input schema
+- 内部 detector output schema / classification result
+- first-batch sample fixtures
+- 纯静态 classification skeleton
+- 对应单元测试
+
+当前实际代码落点为：
+
+- `backend/app/schemas/online_detector.py`
+- `backend/app/services/online/detector_skeleton.py`
+- `backend/tests/fixtures/online_detector_samples.json`
+- `backend/tests/test_online_detector_skeleton.py`
+
+当前 input schema 已承载：
+
+- `stage`
+- `expected_response_type`
+- `requested_url`
+- `final_url`
+- `status_code`
+- `content_type`
+- `redirected`
+- `body_text_preview`
+- `body_text_length`
+
+当前 output schema 已承载：
+
+- `category`
+- `status`
+- `matched_signals`
+- `evidence_snippets`
+- `recommended_error_code`
+- `deferred_requirement_hint`
+
+当前 first-batch fixtures 已覆盖：
+
+- challenge candidate 正样本
+- gateway candidate 正样本
+- login / maintenance / no-results 等负样本
+
+当前 classification skeleton 当前只产出：
+
+- `challenge_candidate`
+- `gateway_candidate`
+- `no_match`
+
+### 18.2 当前没有落地什么
+
+当前仍然 **没有** 落地：
+
+- live detector hook
+- `fetch_service.py` 中的 detector 接入
+- `source_engine.py` 中的 detector 接入
+- suspicious HTML detection
+- browser-required detection
+- js-required detection
+- anti-bot bypass
+- retry / backoff / rate limit 执行策略
+
+### 18.3 当前仍然不支持什么
+
+当前必须继续明确表述为 **不支持**：
+
+- detector live runtime
+- challenge / gateway 的线上执行检测
+- suspicious HTML detector
+- browser/js-required detector
+- JS / WebView / browser fallback
+- anti-bot recovery / bypass
+
+### 18.4 为什么这仍然不等于 detector runtime
+
+因为本轮骨架只运行在：
+
+- 内部 schema
+- 离线 sample fixtures
+- 单元测试
+
+它当前 **不**：
+
+- 消费 live fetch path
+- 消费 live `source_engine` path
+- 改变任一 public API
+- 改变任一 importer / DB / frontend 行为
+- 触发线上错误映射
+
+因此本轮正确口径必须是：
+
+> detector skeleton-modeled offline, not implemented in runtime
+
+### 18.5 当前 error code 的正确理解
+
+当前骨架允许在 classification result 中推荐：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+但这只表示：
+
+- detector static skeleton 已建模这些推荐错误码
+
+并不表示：
+
+- live runtime 已经会抛出这些错误码
+- challenge/gateway detection 已上线
+
+### 18.6 下一步最小任务
+
+在 3-B.7 之后，最小的下一步建议应是：
+
+- **Phase 3-B.8：detector live 接缝决策轮**
+
+该轮应先回答：
+
+- `fetch_service.py` 的 4xx/5xx 早抛错如何与 detector 输入契约衔接
+- detector live hook 到底放在 `source_engine.py` 还是 future coordinator
+- challenge/gateway 候选错误码何时才允许从 skeleton-modeled 升到 runtime-implemented
+
+在这一步之前，仍不应直接进入：
+
+- suspicious HTML runtime
+- browser/js-required runtime
+- anti-bot bypass
+
+## 19. 3-B.8 detector live 接缝决策轮结论
+
+### 19.1 当前仓库证据与缺口
+
+当前仓库已经足以证明以下事实：
+
+- `fetch_service.py`
+  - 当前只负责 transport 执行、response size limit、generic response_guard、response type mismatch 与 `status_code >= 400` 的早抛错
+- `response_guard_service.py`
+  - 当前只负责：
+    - timeout
+    - HTTP 429
+  - 不应继续长成 detector
+- `source_engine.py`
+  - 当前天然位于：
+    - `fetch_stage_response(...)`
+    - `parse_*_preview(...)`
+    之间
+  - 同时拥有最稳定的 stage context
+- `parser_engine.py` / `content_parse_service.py`
+  - 当前已经开始消费 `RawFetchResponse.text/json_data`
+  - 一旦 detector 放到这里，就已经混入 parser/body semantics
+- `detector_skeleton.py`
+  - 当前只消费内部 `DetectorInput`
+  - 当前只在离线 fixtures / tests 中工作
+
+当前真正缺的不是 detector heuristic 本身，而是：
+
+- future live detector 的最小输入来源
+- future live detector 的单点 hook 接缝
+- `fetch_service.py` 早抛错与 detector 读取 challenge/gateway block page 的兼容策略
+- detector 错误码从 `skeleton-modeled` 升到 `runtime-implemented` 的统一门槛
+
+因此本轮正确动作仍然是：
+
+- 先固定 live seam
+- 暂不进入 live detector runtime 代码
+
+### 19.2 决策 1：live 输入来源与裁剪边界
+
+#### 方案 A：直接在 `fetch_service.py` 里构造 `DetectorInput`
+
+优点：
+
+- 最靠近 transport response / exception
+- 最容易看到原始状态码与 headers
+
+缺点：
+
+- 会把 detector 输入构造直接塞进 transport 层
+- `fetch_service.py` 当前并不稳定拥有 stage context
+- 容易让 transport 层开始理解 body semantics
+- 若未来还有别的 detector 输入来源，会在多个层重复构造
+
+风险：
+
+- 污染 `fetch_service.py`
+- 把 detector 与 transport 实现绑死
+- 增大后续回退成本
+
+#### 方案 B：由 `source_engine.py` 在 stage 级直接构造 `DetectorInput`
+
+优点：
+
+- 最稳定地拥有 stage context
+- 已经天然位于 fetch 与 parser 之间
+- 不需要把 detector 输入构造塞进 parser
+
+缺点：
+
+- 如果所有 detector 细节都直接堆进 `source_engine.py`，会让它变成大杂烩
+- 仍然需要一个中间层去统一 success/error outcome
+
+风险：
+
+- 若没有进一步抽薄，会让 `source_engine.py` 同时承担：
+  - stage orchestration
+  - detector input adaptation
+  - detector dispatch
+  - error mapping
+
+#### 方案 C：通过 future adapter/coordinator 在 `fetch` 与 `parser` 之间构造 `DetectorInput`
+
+优点：
+
+- 能保持 detector 继续只吃 normalized `DetectorInput`
+- 能把 response / exception summary 的裁剪集中到单点
+- 能由 `source_engine.py` 提供 stage context，同时不把 `source_engine.py` 本体写胖
+- 最利于未来独立回退
+
+缺点：
+
+- 需要额外定义一个薄的 live seam adapter/coordinator 契约
+- 当前仓库还没有这个中间层
+
+风险：
+
+- 若 adapter 设计过重，会提前长成 runtime coordinator
+- 若 adapter 设计过宽，会变成新的 transport envelope 大杂烩
+
+#### 推荐结论
+
+推荐 **方案 C**，并固定以下边界：
+
+- future live detector 仍应坚持使用 normalized `DetectorInput`
+- `DetectorInput` 不应由 detector 自己从原始对象中抽取
+- `DetectorInput` 应由 future adapter/coordinator 在单点构造
+- `source_engine.py` 提供 stage context
+- `fetch_service.py` 只继续提供 transport outcome
+
+不推荐方案 A 的原因：
+
+- 会过度污染 transport 层
+- 会让 `fetch_service.py` 提前承担 detector 职责
+
+不推荐方案 B 的原因：
+
+- 高层方向是对的，但如果没有一个明确的薄 adapter，`source_engine.py` 容易继续膨胀
+
+### 19.3 决策 2：live hook 最合适放在哪一层
+
+#### 方案 A：hook 放在 `fetch_service.py`
+
+优点：
+
+- 最早看到 response / exception
+- 理论上最容易统一 success / error outcome
+
+缺点：
+
+- 直接污染 transport 叶子层
+- 缺少稳定 stage context
+- 会把 body-level detector 逻辑塞到不该理解页面语义的层
+
+风险：
+
+- `fetch_service.py` 变成 transport + detector 混合层
+
+#### 方案 B：hook 放在 `source_engine.py`
+
+优点：
+
+- 当前最自然的编排接缝
+- 已经位于 fetch 与 parser 之间
+- stage context 最完整
+
+缺点：
+
+- 如果直接把 detector dispatch、input adaptation、error mapping 都写进去，`source_engine.py` 会继续变厚
+
+风险：
+
+- `source_engine.py` 可能演变成新的运行时大杂烩
+
+#### 方案 C：hook 放在 future coordinator / adapter，并由 `source_engine.py` 调用
+
+优点：
+
+- 逻辑位置仍然处于 `source_engine.py` seam
+- 实现责任却可以保持为一个薄中间层
+- 既保留 stage context，又不污染 parser / fetch
+- 最利于后续独立回退
+
+缺点：
+
+- 当前仓库还没有这个中间层
+- 需要下一轮进一步把这个最小 adapter 结构钉死
+
+风险：
+
+- 若 coordinator 过重，会提前承担过多 runtime orchestration 责任
+
+#### 推荐结论
+
+推荐 **方案 C**，并把结论写清为：
+
+- future live hook 的逻辑接缝位于：
+  - `source_engine.py`
+  - `fetch_stage_response(...)` 之后
+  - `parse_*_preview(...)` 之前
+- 但实际 detector dispatch 不建议直接硬塞进 `source_engine.py`
+- 更推荐由 `source_engine.py` 调用一个 future thin coordinator / adapter
+
+不推荐方案 A 的原因：
+
+- `fetch_service.py` 必须继续停留在 transport/generic response 层
+
+不推荐方案 B 的原因：
+
+- 直接把 live hook 细节堆进 `source_engine.py` 会放大后续维护成本
+
+### 19.4 决策 3：`fetch_service.py` 早抛错与 detector 的兼容策略
+
+#### 当前仓库真实结论
+
+当前 `fetch_service.py` 的：
+
+- `status_code >= 400` 早抛错
+
+**会阻断** future detector 对一部分 challenge/gateway 候选响应的读取。
+
+证据来自当前代码路径：
+
+- `httpx.request(...)` 返回后
+- `classify_generic_response_issue(...)` 只处理 429
+- 若 `response.status_code >= 400`
+  - 直接抛出 `FetchServiceError`
+  - 不返回 `RawFetchResponse`
+- 因此像 `403/503` 这类 gateway / challenge candidate 页面，当前 live path 无法把 body 继续交给 detector
+
+受影响的 future use cases 至少包括：
+
+- `403` challenge HTML
+- `403` gateway / access denied block page
+- `503` security service / WAF intercepted page
+
+#### 方案 A：保持 `fetch_service.py` 现状，不为 detector 改动
+
+优点：
+
+- 对现有系统零侵入
+- 最保守
+
+缺点：
+
+- future detector 无法覆盖关键的 `403/503` 候选场景
+- challenge/gateway live 检测价值会明显受限
+
+风险：
+
+- 可能导致“看似有 live seam，实际无法看到关键样本”
+
+#### 方案 B：future 引入 exception-to-summary adapter
+
+优点：
+
+- 可以继续保持 `fetch_service.py` 的公共行为不变
+- 能把 fetch 的 success / early error outcome 统一裁剪成 detector 可读的 summary
+- 是下一轮最小 live seam 讨论里最小、最保守的方向
+
+缺点：
+
+- 需要先定义：
+  - 哪些错误需要保留 body snapshot
+  - 哪些只保留 generic error
+- 当前还没有这个 adapter 契约
+
+风险：
+
+- 若 summary 设计不当，仍可能丢失关键证据
+
+#### 方案 C：future 引入 transport result envelope
+
+优点：
+
+- 理论上最完整
+- 最适合长期扩展
+
+缺点：
+
+- 对现有 fetch 链路侵入最大
+- 很容易演变成本轮不该开始的大重构
+
+风险：
+
+- 会让下一轮从“最小 live seam”升级成 transport contract 重写
+
+#### 推荐结论
+
+推荐 **方案 B** 作为下一轮最小入口方向：
+
+- 当前不修改 `fetch_service.py` live 行为
+- 当前只固定 future 方向为：
+  - 引入 exception-to-summary style 的 live seam adapter 设计
+- 暂不进入 transport result envelope 实装
+
+不推荐方案 A 的原因：
+
+- 它不足以支撑 future challenge/gateway live classification
+
+不推荐方案 C 的原因：
+
+- 对当前阶段过重
+- 还不符合“最小不可再小”的下一轮入口要求
+
+### 19.5 决策 4：错误码从 `skeleton-modeled` 升级到 `runtime-implemented` 的条件
+
+#### 方案 A：只要 skeleton 能推荐错误码就升级
+
+优点：
+
+- 状态推进最快
+
+缺点：
+
+- 会把离线推荐错误码误写成 live runtime 已支持
+- 阶段误导风险最高
+
+风险：
+
+- 误导为 anti-bot / challenge / gateway 已上线
+
+#### 方案 B：必须 live seam 已接通且可稳定触发才升级
+
+优点：
+
+- 与当前仓库证据最一致
+- 兼顾 Traceability 和阶段口径
+- 能明确区分：
+  - offline skeleton
+  - runtime-implemented
+
+缺点：
+
+- 状态推进更保守
+
+风险：
+
+- 需要后续测试矩阵更完整
+
+#### 方案 C：等完整 detector runtime 全部做完再升级
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 过于迟滞
+- 不利于分阶段、分能力推进
+
+风险：
+
+- 会让 challenge / gateway 明明已经具备最小 live classification，也长期无法反映在状态层
+
+#### 推荐结论
+
+推荐 **方案 B**，并固定 challenge / gateway 共用同一套升级门槛：
+
+只有同时满足以下条件，才允许从 `skeleton-modeled` 升到 `runtime-implemented`：
+
+1. live seam 已存在且仍是内部接缝
+2. detector 在 live path 中能稳定收到 normalized `DetectorInput`
+3. 对应错误码可被稳定触发，而不是只存在 `recommended_error_code`
+4. 有正样本与负样本
+5. 有单测与至少一层集成/回归验证
+6. 文档、Traceability、错误码状态都继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+不推荐方案 A 的原因：
+
+- 它会把“recommended error code”误写成“runtime 已会抛出”
+
+不推荐方案 C 的原因：
+
+- 不利于按最小 live classification 能力逐步升级
+
+### 19.6 决策 5：下一轮最小可执行任务
+
+#### 方案 A：继续停在设计层，专门做更泛的 live seam 设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 本轮已经把高层 seam 方向钉得比较清楚
+- 再做泛设计，新增信息量有限
+
+风险：
+
+- 容易重复 3-B.8 的结论
+
+#### 方案 B：进入最小 live seam skeleton 决策轮
+
+优点：
+
+- 仍然不进入 live runtime 实装
+- 但能把下一轮继续收敛到最小可实装入口
+- 能专门解决：
+  - future exception-to-summary adapter 契约
+  - detector live input summary 的最小字段集
+  - `source_engine.py` 调用薄 coordinator 的边界
+
+缺点：
+
+- 仍然是决策轮，不是实现轮
+
+风险：
+
+- 需要严格限制范围，避免再度发散
+
+#### 方案 C：直接进入 detector live hook 最小骨架实装
+
+优点：
+
+- 推进速度最快
+
+缺点：
+
+- 当前仍缺最小 live seam adapter 契约
+- 当前仍缺对 early error outcome 的统一承载决策
+- 直接实装最容易伤到 fetch/source/parser 边界
+
+风险：
+
+- 直接越界进入 detector live runtime
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小的任务集合应固定为：
+
+- **Phase 3-B.9：detector live seam skeleton 决策轮**
+- 只回答：
+  - future exception-to-summary / fetch-outcome adapter 的最小 contract
+  - `source_engine.py` 调用薄 coordinator 的最小边界
+  - detector live input summary 的最小字段保留规则
+  - 无 detector 命中时成功路径零破坏的最小测试矩阵
+
+当前不推荐直接进入 live hook 实装，原因是：
+
+- 仍缺最小 adapter 契约
+- 仍缺 error outcome 到 detector input 的稳定收敛方式
+- 仍缺最小 live seam success/error 双路径测试设计
+
+当前更不应越级进入：
+
+- browser/js runtime
+- anti-bot bypass
+- 3-C / 3-D
+
+### 19.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**
+
+原因：
+
+- 当前仓库已经有足够证据固定 live 输入来源方向
+- 当前仓库已经有足够证据固定 live hook 放置层次
+- 当前仓库已经有足够证据确认 `fetch_service.py` 早抛错确实影响 future detector
+- 当前仓库已经有足够证据固定错误码升级门槛
+
+#### Step 2：如果主张本轮必须落代码，是否已经有充分证明
+
+结论：**没有**
+
+当前仍然无法证明：
+
+- 不落代码会阻塞下一轮
+- 需要落的代码已经小到不可再小
+- 新增 live seam 代码不会构成 detector live runtime
+- 新增代码不会影响既有 fetch/source/parser 链路
+
+因此 3-B.8 正确停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 live detector runtime 实装。

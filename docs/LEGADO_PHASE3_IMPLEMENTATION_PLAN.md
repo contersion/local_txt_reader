@@ -14,6 +14,9 @@
 - `Phase 3-B.3`
 - `Phase 3-B.4`
 - `Phase 3-B.5`
+- `Phase 3-B.6`
+- `Phase 3-B.7`
+- `Phase 3-B.8`
 
 ## 阶段拆分
 
@@ -475,6 +478,234 @@
 本轮完成后，当前项目应继续表述为：
 
 > `Phase 3-B.5` 已完成 detector / anti-bot 边界设计，仓库仍未进入 detector / anti-bot 实装，仍未进入 3-C / 3-D。
+
+### Phase 3-B.6：detector 最小静态分类骨架决策轮
+#### 目标
+
+- 固定 detector 输入契约
+- 固定 detector 输出契约
+- 固定 first-batch sample matrix
+- 固定 challenge / gateway 的最小 generic heuristic 边界
+
+#### 默认策略
+
+- 默认只做文档、Traceability、错误码状态与测试规划
+- 默认不落代码
+
+#### 本轮固定结论
+
+- detector 不应直接依赖完整 `httpx.Response`
+- detector 也不应直接依赖 parser 输出
+- detector 的 future 输入应收敛为：
+  - normalized detection input
+  - 由 stage context + bounded response evidence summary 组成
+- detector 的 future 输出应收敛为：
+  - structured classification result
+  - 再由上层映射错误码
+- first-batch 正向样本只覆盖：
+  - challenge candidate
+  - gateway candidate
+- `suspicious HTML`
+  - 继续保留在文档候选层
+  - 暂不进入 first-batch 默认样本
+- `browser-required` / `js-required`
+  - 继续只保留在文档候选与 deferred 状态层
+  - 暂不进入 first-batch 默认样本
+- challenge / gateway 的第一轮 heuristic 只允许：
+  - 极少数 generic signal bundles
+  - 不允许 site-specific 线索进入首轮边界
+
+#### 为什么本轮仍然不进入 detector 代码
+
+- 当前 `fetch_service.py` 在 `status_code >= 400` 时会提前抛错
+- 这说明 detector 首先缺的是稳定输入载体，而不是 heuristic 代码
+- 若现在直接落 detector service / hook，更容易把 transport、parser、heuristic 与 future recovery 混写在一起
+- 当前没有充分证据证明 detector 空壳已经是“最小不可再小”
+
+#### 下一轮若推进，最小入口应该是什么
+
+推荐下一轮进入：
+
+- **Phase 3-B.7：detector 最小静态分类骨架实现**
+
+但范围必须继续收紧为：
+
+- 只落内部 detector input schema
+- 只落内部 detector output schema
+- 只落 challenge/gateway first-batch sample fixtures
+- 只落纯离线、可单测的静态分类骨架
+
+当前仍不应直接进入：
+
+- live detector hook
+- suspicious HTML heuristic
+- browser/js-required heuristic
+- anti-bot bypass
+- 3-C / 3-D
+
+#### 若下一轮仍不落代码，项目是否仍可推进
+
+可以，但收益会明显下降。
+
+原因：
+
+- 经过 3-B.5 与 3-B.6，detector 的边界、契约与样本范围已经足够清晰
+- 若继续只做文档轮，理论上仍然合理，尤其当团队还想先收紧 sample governance
+- 但默认建议是：3-B.6 之后文档层已经足够支撑下一轮进入最小离线骨架实现
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.6` 已完成 detector 最小静态分类骨架决策，仓库仍未进入 detector / anti-bot 实装，仍未进入 3-C / 3-D。
+
+### Phase 3-B.7：detector 最小静态分类骨架实现
+#### 目标
+
+- 只落内部 detector input schema
+- 只落内部 detector output schema / classification result
+- 只落 challenge/gateway first-batch sample fixtures
+- 只落纯离线、可单测的静态 classification skeleton
+
+#### 默认策略
+
+- 允许进入代码
+- 但只允许内部 schema / fixtures / skeleton / tests
+- 不接 live runtime
+
+#### 已落地范围
+
+- `backend/app/schemas/online_detector.py`
+- `backend/app/services/online/detector_skeleton.py`
+- `backend/tests/fixtures/online_detector_samples.json`
+- `backend/tests/test_online_detector_skeleton.py`
+- `backend/app/schemas/online_runtime.py`
+  - 仅补充 `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 枚举项
+
+#### 明确不做什么
+
+- 不接 `fetch_service.py` live path
+- 不接 `source_engine.py` live path
+- 不实现 suspicious HTML detector
+- 不实现 browser-required / js-required detector
+- 不实现 anti-bot bypass
+- 不实现 JS / browser fallback
+- 不改 public router / importer / DB / frontend
+
+#### 为什么这一步安全
+
+- 改动范围完全局限于内部 schema、离线 fixtures、离线 skeleton 与测试
+- 现有在线请求链没有接入任何 detector hook
+- 现有 3-B.2 / 3-B.3 路径继续按原行为运行
+
+#### 验收标准
+
+- detector input schema 可单独构建与校验
+- detector output schema 可表达：
+  - `no_match`
+  - `candidate_match`
+  - `deferred`
+- first-batch fixtures 可被稳定加载
+- challenge / gateway 正样本命中
+- 负样本不误命中
+- `fetch_service.py` / `source_engine.py` 未接入 detector live path
+- 3-B.2 / 3-B.3 与 online/import 回归继续通过
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.7` 已完成 detector 最小静态分类骨架实现，但仓库仍未进入 detector live runtime，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.8：detector live 接缝决策轮**
+
+而不是直接进入：
+
+- suspicious HTML runtime
+- browser/js-required runtime
+- anti-bot bypass
+
+### Phase 3-B.8：detector live 接缝决策轮
+#### 目标
+
+- 固定 future detector live 输入从哪一层来
+- 固定 future detector live hook 的最小接缝位置
+- 固定 `fetch_service.py` 4xx/5xx 早抛错与 detector future 接入的兼容方向
+- 固定 detector 错误码从 `skeleton-modeled` 升到 `runtime-implemented` 的门槛
+- 为下一轮最小 live seam skeleton 继续收敛边界
+
+#### 默认策略
+
+- 默认只做文档、Traceability、错误码状态与测试规划
+- 默认不落代码
+
+#### 本轮固定结论
+
+- future live detector 仍应继续消费 normalized `DetectorInput`
+- `DetectorInput` 不应在 `fetch_service.py` 中直接构造
+- `DetectorInput` 更适合由 future thin adapter / coordinator 在：
+  - `fetch`
+  - `parser`
+  之间单点构造
+- 这个接缝在逻辑上仍位于：
+  - `source_engine.py`
+  - `fetch_stage_response(...)` 之后
+  - `parse_*_preview(...)` 之前
+- `fetch_service.py` 当前的 `status_code >= 400` 早抛错，确实会阻断 future detector 对部分 challenge/gateway block page 的读取
+- 下一轮若要继续推进，最小方向不应是 transport result 重构，而应优先固定：
+  - future exception-to-summary / fetch-outcome adapter 的最小契约
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - 继续保持 `skeleton_modeled`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - 继续保持 `skeleton_modeled`
+- 它们只有在以下条件全部满足后，才允许升级到 `runtime-implemented`：
+  - live seam 已接通
+  - live path 能稳定构造 `DetectorInput`
+  - live path 能稳定触发对应错误码
+  - 正负样本齐备
+  - 单测 / 集成回归齐备
+  - 文档仍明确它们只是 classification，不是 bypass
+
+#### 为什么本轮仍不进入 live detector 实装
+
+- 当前仓库虽然已经足够决定 seam 方向，但还没有最小 fetch-outcome adapter 契约
+- 当前仓库虽然已经足够证明 early raise 是 blocker，但还没有收敛到“最小不可再小”的 live seam skeleton
+- 现在直接实装，最容易伤到：
+  - `fetch_service.py`
+  - `source_engine.py`
+  - `parser/content_parse`
+  的既有边界
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.9：detector live seam skeleton 决策轮**
+
+只收敛以下内容：
+
+- future exception-to-summary / fetch-outcome adapter contract
+- `source_engine.py` 调用 future thin coordinator 的最小边界
+- detector live input summary 的最小字段保留规则
+- 无 detector 命中时成功路径零破坏的最小测试矩阵
+
+当前仍不应直接进入：
+
+- detector live hook 实装
+- suspicious HTML runtime
+- browser/js-required runtime
+- anti-bot bypass
+- 3-C / 3-D
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.8` 已完成 detector live 接缝决策，仓库仍未进入 detector live runtime，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
 
 ### Phase 3-C：受限 JS 沙箱
 

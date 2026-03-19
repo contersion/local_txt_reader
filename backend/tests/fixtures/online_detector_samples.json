@@ -1,0 +1,125 @@
+[
+  {
+    "sample_id": "challenge-browser-check-search",
+    "stage": "search",
+    "status_code": 200,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": true,
+    "requested_url": "https://books.example/search?q=test",
+    "final_url": "https://books.example/challenge",
+    "body_text_preview": "<html><title>Checking your browser</title><body>Checking your browser before accessing the site. Enable JavaScript and cookies to continue.</body></html>",
+    "expected_category": "challenge_candidate",
+    "expected_status": "candidate_match",
+    "expected_recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE",
+    "expected_matched_signals": [
+      "challenge_browser_check",
+      "challenge_js_cookie_continue",
+      "challenge_path_hint"
+    ],
+    "notes": "Generic browser check challenge page with JS and cookie wording."
+  },
+  {
+    "sample_id": "challenge-human-verify-detail",
+    "stage": "detail",
+    "status_code": 403,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": false,
+    "requested_url": "https://books.example/detail/123",
+    "final_url": "https://books.example/detail/123",
+    "body_text_preview": "<html><title>Human Verification</title><body>Human verification required. Please verify you are human to continue.<form><input type='checkbox' name='human_check' /><button>Continue</button></form></body></html>",
+    "expected_category": "challenge_candidate",
+    "expected_status": "candidate_match",
+    "expected_recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE",
+    "expected_matched_signals": [
+      "challenge_human_verification",
+      "challenge_interactive_control"
+    ],
+    "notes": "Generic human verification page with interaction controls."
+  },
+  {
+    "sample_id": "gateway-access-denied-catalog",
+    "stage": "catalog",
+    "status_code": 403,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": false,
+    "requested_url": "https://books.example/catalog/123",
+    "final_url": "https://books.example/catalog/123",
+    "body_text_preview": "<html><title>Access denied</title><body>Access denied. This request has been blocked by security rules. The web application firewall denied the request.</body></html>",
+    "expected_category": "gateway_candidate",
+    "expected_status": "candidate_match",
+    "expected_recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY",
+    "expected_matched_signals": [
+      "gateway_access_denied",
+      "gateway_security_rules",
+      "gateway_firewall_wording",
+      "gateway_status_support"
+    ],
+    "notes": "Generic gateway / WAF block page with security rules wording."
+  },
+  {
+    "sample_id": "gateway-security-service-content",
+    "stage": "content",
+    "status_code": 503,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": true,
+    "requested_url": "https://books.example/content/123",
+    "final_url": "https://books.example/blocked",
+    "body_text_preview": "<html><title>Request blocked</title><body>Request blocked by security service. Forbidden by security policy. Please contact the site owner if you believe this is an error.</body></html>",
+    "expected_category": "gateway_candidate",
+    "expected_status": "candidate_match",
+    "expected_recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY",
+    "expected_matched_signals": [
+      "gateway_request_blocked",
+      "gateway_security_service",
+      "gateway_security_policy",
+      "gateway_status_support",
+      "gateway_path_hint"
+    ],
+    "notes": "Generic blocked page with security service wording and redirected blocked path."
+  },
+  {
+    "sample_id": "negative-login-with-captcha",
+    "stage": "detail",
+    "status_code": 200,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": false,
+    "requested_url": "https://books.example/login",
+    "final_url": "https://books.example/login",
+    "body_text_preview": "<html><title>Sign in</title><body>Please sign in to continue reading. Email, password, and captcha are required for account login.</body></html>",
+    "expected_category": "no_match",
+    "expected_status": "no_match",
+    "expected_recommended_error_code": null,
+    "expected_matched_signals": [],
+    "notes": "Normal login page should not be classified as challenge or gateway."
+  },
+  {
+    "sample_id": "negative-maintenance-503",
+    "stage": "content",
+    "status_code": 503,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": false,
+    "requested_url": "https://books.example/content/456",
+    "final_url": "https://books.example/content/456",
+    "body_text_preview": "<html><title>Service unavailable</title><body>The service is temporarily unavailable for maintenance. Please try again later.</body></html>",
+    "expected_category": "no_match",
+    "expected_status": "no_match",
+    "expected_recommended_error_code": null,
+    "expected_matched_signals": [],
+    "notes": "A plain maintenance page should not become gateway_candidate."
+  },
+  {
+    "sample_id": "negative-no-results-search",
+    "stage": "search",
+    "status_code": 200,
+    "content_type": "text/html; charset=utf-8",
+    "redirected": false,
+    "requested_url": "https://books.example/search?q=missing",
+    "final_url": "https://books.example/search?q=missing",
+    "body_text_preview": "<html><title>Search Results</title><body>No results found for the current search query.</body></html>",
+    "expected_category": "no_match",
+    "expected_status": "no_match",
+    "expected_recommended_error_code": null,
+    "expected_matched_signals": [],
+    "notes": "Normal empty-result page should remain no_match."
+  }
+]

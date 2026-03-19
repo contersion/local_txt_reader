@@ -29,6 +29,8 @@
   - 当前仓库已有对应代码骨架，能够在有限场景下抛出
 - `candidate_for_first_implementation`
   - 已完成 3-B.1 决策固定，适合作为下一轮最小实装入口，但当前尚未进入代码
+- `skeleton_modeled`
+  - 已进入内部静态骨架、fixture 或 classification result，但尚未接入 live runtime
 - `documented_only`
   - 当前仅在文档中建模或保留编号语义，不进入本轮代码
 - `deferred`
@@ -79,8 +81,8 @@
 | `LEGADO_INVALID_HEADER_TEMPLATE` | 非法 header template | implemented | 已进入 `online_runtime.py` 与 `request_profile_service.py` | 3-B.2 | 当前只做静态结构/模板合法性校验 |
 | `LEGADO_REQUEST_TIMEOUT` | request timeout | implemented | 已进入 `response_guard_service.py` 与 `fetch_service.py` | 3-B.3 | 纯 transport timeout 分类，不涉及 detector |
 | `LEGADO_REQUEST_RETRY_EXHAUSTED` | retry 已耗尽 | documented_only | 未实现 | 3-B | 当前仓库没有 retry 机制，不应先落空壳错误码 |
-| `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` | 被 anti-bot gateway 阻断 | candidate_for_first_implementation | 文档建模，未入代码枚举 | 3-B.5 | 可进入 future detector skeleton 候选，但只允许 classification，不允许 bypass |
-| `LEGADO_ANTI_BOT_CHALLENGE` | 触发反爬挑战 | candidate_for_first_implementation | 已在代码枚举中预留，但未激活 | 3-B.5 | 可进入 future detector skeleton 候选，但只允许 classification，不允许 challenge solving |
+| `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` | 被 anti-bot gateway 阻断 | skeleton_modeled | 已进入内部 detector skeleton 推荐错误码，未接 live runtime | 3-B.7 | 只表示静态骨架已建模；必须满足 4.8 的升级门槛后才能转为 `runtime-implemented` |
+| `LEGADO_ANTI_BOT_CHALLENGE` | 触发反爬挑战 | skeleton_modeled | 已进入内部 detector skeleton 推荐错误码，未接 live runtime | 3-B.7 | 只表示静态骨架已建模；必须满足 4.8 的升级门槛后才能转为 `runtime-implemented` |
 | `LEGADO_SUSPICIOUS_HTML_RESPONSE` | 检测到可疑 HTML 响应 | documented_only | 文档建模，未入代码枚举 | 3-B.5 | heuristic 空间仍过宽，当前只保留文档建模 |
 | `LEGADO_UNSUPPORTED_SIGNATURE_FLOW` | 不支持的签名流程 | implemented | 已进入 `online_runtime.py` 与 `request_profile_service.py` | 3-B.2 | 当前只做占位识别与拒绝分类，不做求值 |
 
@@ -234,6 +236,170 @@
 - 不表示 anti-bot 绕过已支持
 - 不表示 JS / browser runtime 已支持
 
+## 4.6 3-B.6 detector 静态骨架与 first-batch 样本分层结论
+
+本轮没有让 detector 候选错误码进入实现。
+
+本轮只进一步固定了：
+
+- 哪些候选错误码进入 first-batch sample matrix
+- 哪些候选错误码继续停留在文档候选层
+- 哪些候选错误码继续保持 deferred
+
+### 4.6.1 进入 first-batch 默认样本的 detector 候选
+
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - 状态保持：`candidate_for_first_implementation`
+  - 进入 first-batch 默认正向样本
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - 状态保持：`candidate_for_first_implementation`
+  - 进入 first-batch 默认正向样本
+
+原因：
+
+- 这两类更容易收敛为 challenge/gateway 的最小 generic signal bundles
+- 也更适合作为 first-batch detector skeleton 的最小正向分类目标
+
+### 4.6.2 暂不进入 first-batch 默认样本的 detector 候选
+
+- `LEGADO_SUSPICIOUS_HTML_RESPONSE`
+  - 状态保持：`documented_only`
+  - 当前不进入 first-batch 默认样本
+
+原因：
+
+- 它最容易和 parser/stage/site semantics 混淆
+- 当前证据不足以把它压缩成稳定、低误伤的 first-batch 默认样本
+
+### 4.6.3 继续 deferred 的 detector 侧能力
+
+- `LEGADO_JS_EXECUTION_REQUIRED`
+  - 状态保持：`deferred`
+  - 当前不进入 first-batch 默认样本
+  - 继续后置到 `3-C`
+- `LEGADO_BROWSER_STATE_REQUIRED`
+  - 状态保持：`deferred`
+  - 当前不进入 first-batch 默认样本
+  - 继续后置到 `3-D`
+
+原因：
+
+- 这两类更适合作为 detector 输出中的 deferred requirement hint
+- 当前不应把它们提前包装成 first-batch detector skeleton 的默认正向目标
+
+## 4.7 3-B.7 detector 静态骨架建模后的错误码状态
+
+本轮进入代码的只是内部 detector static skeleton，因此 detector 相关错误码状态必须继续与 live runtime 分离。
+
+### 4.7.1 当前已进入 skeleton_modeled 的错误码
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+它们当前之所以从 candidate 升为 `skeleton_modeled`，是因为：
+
+- 已经进入内部 output schema 的 `recommended_error_code`
+- 已经进入 first-batch sample fixtures
+- 已经进入离线 classification skeleton 的测试覆盖
+
+但它们当前 **仍不表示**：
+
+- `fetch_service.py` 会抛出这些错误码
+- `source_engine.py` 会消费 detector 结果
+- challenge/gateway detector 已上线
+- anti-bot 支持已存在
+
+### 4.7.2 当前仍停留在 documented_only 的 detector 错误码
+
+- `LEGADO_SUSPICIOUS_HTML_RESPONSE`
+
+原因：
+
+- 本轮没有实现 suspicious HTML skeleton
+- 本轮也没有让 suspicious HTML 进入 first-batch 默认 fixtures
+
+### 4.7.3 当前仍保持 deferred 的 detector 相关错误码
+
+- `LEGADO_JS_EXECUTION_REQUIRED`
+- `LEGADO_BROWSER_STATE_REQUIRED`
+
+原因：
+
+- 本轮静态骨架没有实现 browser/js-required 分类
+- 它们仍然只作为 future deferred capability 概念存在
+
+## 4.8 3-B.8 detector live 接缝决策后的错误码升级门槛
+
+本轮进一步固定：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前都继续保持：
+
+- `skeleton_modeled`
+
+当前**不允许**因为离线 skeleton 已经能给出 `recommended_error_code`，就把它们升级为：
+
+- `runtime-implemented`
+
+### 4.8.1 方案比较结论
+
+#### 方案 A：只要 skeleton 能推荐错误码就升级
+
+不推荐。
+
+原因：
+
+- 会把离线 classification result 误写成 live runtime 已接通
+- 会误导为 challenge/gateway 已经能在线触发
+
+#### 方案 B：必须 live seam 已接通且稳定触发才升级
+
+推荐。
+
+原因：
+
+- 与当前仓库真实边界一致
+- 能保持 `recommended_error_code` 与 `runtime actually raises` 的口径区分
+- 适合作为 challenge / gateway 的统一升级门槛
+
+#### 方案 C：等完整 detector runtime 全部做完再升级
+
+不推荐。
+
+原因：
+
+- 过于迟滞
+- 不利于后续按最小 live classification 能力逐步推进
+
+### 4.8.2 升级到 `runtime-implemented` 的统一条件
+
+challenge / gateway 两类 detector 错误码都必须满足同一套门槛，才允许升级：
+
+1. future live seam 已接通
+2. live path 能稳定构造 normalized `DetectorInput`
+3. live path 能稳定命中并 surface 对应错误码
+4. 正样本与负样本都存在
+5. 单元测试与至少一层集成/回归测试存在
+6. 文档、Traceability 与错误码状态仍明确写清：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+只要上述任何一项仍未满足：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+就必须继续保持：
+
+- `skeleton_modeled`
+
+而不能升级为：
+
+- `runtime-implemented`
+
 ## 5. 当前不实现但必须预留的错误码
 
 以下错误码当前保留为 `documented_only`，不进入当前代码：
@@ -295,6 +461,15 @@ Phase 3 错误码负责未来运行时阶段的动态错误，例如：
   - `LEGADO_REQUEST_TIMEOUT`
   - `LEGADO_RATE_LIMITED`
 - 已进入当前 3-B.5 detector future candidate 分层：
+  - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `LEGADO_ANTI_BOT_CHALLENGE`
+- 已进入当前 3-B.6 first-batch 默认样本候选：
+  - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `LEGADO_ANTI_BOT_CHALLENGE`
+- 已进入当前 3-B.7 skeleton-modeled：
+  - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `LEGADO_ANTI_BOT_CHALLENGE`
+- 已在当前 3-B.8 固定 `runtime-implemented` 升级门槛：
   - `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
   - `LEGADO_ANTI_BOT_CHALLENGE`
 - 当前只保留文档，不建议首批进入代码

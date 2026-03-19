@@ -69,6 +69,24 @@
 | browser-required candidate signal | 3-B.5 | decision-fixed | not implemented | deferred to 3-D | 未暴露 | future `anti_bot_detector`, `browser_fallback_service` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | deferred |
 | js-required candidate signal | 3-B.5 | decision-fixed | not implemented | deferred to 3-C | 未暴露 | future `anti_bot_detector`, `js_execution_sandbox` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | deferred |
 | 下一轮最小 detector 任务占位 | 3-B.5 | decision-fixed | not implemented | 推荐转 3-B.6 detector skeleton 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| detector input contract | 3-B.6 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future `anti_bot_detector` input layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | detector input schema / fixture 测试规划 |
+| detector output contract | 3-B.6 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future `anti_bot_detector` result layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | detector result mapping 测试规划 |
+| challenge/gateway first-batch sample matrix | 3-B.6 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future detector sample fixtures | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | sample fixture / golden test 规划 |
+| suspicious HTML sample inclusion decision | 3-B.6 | decision-fixed | not implemented | documented only | 未暴露 | future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | 暂不进入 first-batch 默认样本 |
+| browser/js-required sample inclusion decision | 3-B.6 | decision-fixed | not implemented | deferred to 3-C / 3-D | 未暴露 | future `anti_bot_detector` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | 暂不进入 first-batch 默认样本 |
+| challenge/gateway generic heuristic boundary | 3-B.6 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future `anti_bot_detector` heuristic layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | signal-bundle 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.6 | decision-fixed | not implemented | 推荐转 3-B.7 detector skeleton 实现轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| detector input schema | 3-B.7 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_skeleton.py` |
+| detector output schema / classification result | 3-B.7 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_skeleton.py` |
+| detector first-batch sample fixtures | 3-B.7 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_skeleton.py` |
+| detector static classification skeleton | 3-B.7 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_skeleton.py` |
+| live runtime 零接入边界 | 3-B.7 | implemented | 部分验证 | 文档已固定 | 未暴露 | `backend/app/services/online/fetch_service.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_skeleton.py`, 既有 online/import 回归 |
+| 下一轮最小 detector 任务占位 | 3-B.7 | decision-fixed | not implemented | 推荐转 3-B.8 detector live 接缝决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
+| detector live 输入来源决策 | 3-B.8 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future live seam adapter / coordinator | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | live seam contract 测试规划 |
+| detector live hook 位置决策 | 3-B.8 | decision-fixed | not implemented | 文档已固定 | 未暴露 | `source_engine.py` seam + future thin coordinator | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | live seam integration 测试规划 |
+| fetch early-raise 兼容策略 | 3-B.8 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future exception-to-summary / fetch-outcome adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | error-outcome seam 测试规划 |
+| challenge/gateway 错误码 runtime 升级条件 | 3-B.8 | decision-fixed | not implemented | 文档已固定 | 未暴露 | 文档层 gate，future live detector path | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 正负样本 + live seam 回归规划 |
+| 下一轮最小 detector 任务占位 | 3-B.8 | decision-fixed | not implemented | 推荐转 3-B.9 detector live seam skeleton 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | 待下一轮 |
 | anti_bot_detector 分层 | 3-B.1 | decision-fixed | not implemented | 未正式支持 | 未暴露 | `anti_bot_detector` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | gateway / challenge / suspicious HTML 规划测试 |
 | 第一批 3-B 错误码选择 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | 复杂请求 / 基础反爬 | 3-B | 已设计 | 未实现 | 未正式支持 | 未暴露 | `anti_bot_handler` 预留 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 未实现 |
@@ -84,6 +102,9 @@
 | L2 | body mode / request description / 参数装配 | implemented (minimal preflight only) | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | L3-G | generic response_guard | implemented (timeout/429 only) | `backend/app/services/online/response_guard_service.py`, `backend/app/services/online/fetch_service.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_response_guard.py` |
 | L3-D | detector / anti-bot classification | decision-fixed / not implemented | future `anti_bot_detector` via `source_engine.py` seam | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | challenge/gateway/browser/js-required detector 测试规划 |
+| L3-D.1 | detector static skeleton contracts | decision-fixed / not implemented | future detector input/result contract layer | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | contract / fixture / golden test 规划 |
+| L3-D.2 | detector offline static skeleton | implemented (offline only) | `backend/app/schemas/online_detector.py`, `backend/app/services/online/detector_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_skeleton.py` |
+| L3-D.3 | detector live seam decision | decision-fixed / not implemented | future `source_engine.py` seam + thin coordinator / fetch-outcome adapter | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | live seam contract / no-regression 测试规划 |
 | L4 | JS 依赖能力 | deferred to 3-C | `js_execution_sandbox` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 | L5 | 浏览器态 / WebView | deferred to 3-D | `browser_fallback_service` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 
@@ -132,7 +153,17 @@
 | empty response classification | on hold / not implemented |
 | content-type mismatch classification | narrow candidate / not implemented |
 | detector scope | decision-fixed / not implemented |
-| challenge / gateway detector candidates | candidate / not implemented |
+| detector input contract | decision-fixed / not implemented |
+| detector output contract | decision-fixed / not implemented |
+| challenge/gateway first-batch sample matrix | decision-fixed / not implemented |
+| challenge/gateway generic heuristic boundary | decision-fixed / not implemented |
+| detector input schema | implemented / offline only |
+| detector output schema | implemented / offline only |
+| detector sample fixtures | implemented / offline only |
+| detector static skeleton | implemented / offline only |
+| detector live seam | decision-fixed / not implemented |
+| detector error-code runtime upgrade gate | decision-fixed / not implemented |
+| challenge / gateway detector candidates | skeleton-modeled / offline only |
 | suspicious HTML detector candidate | documented only / not implemented |
 | anti-bot detection | decision-fixed / not implemented |
 | anti-bot bypass | not formally supported |
@@ -197,3 +228,70 @@
 6. 下一轮最小任务已明确收敛为：
    - `Phase 3-B.6` detector skeleton 决策轮
 7. 本轮仍然只修改文档，不触碰运行时代码路径
+
+当前 3-B.6 detector 最小静态分类骨架决策轮的最小验收链为：
+
+1. detector 输入契约已固定为：
+   - stage context + bounded response evidence summary
+   - 不直接绑定完整 `httpx.Response`
+2. detector 输出契约已固定为：
+   - structured classification result
+   - 再映射错误码
+3. first-batch 正向样本范围已固定为：
+   - challenge
+   - gateway
+4. suspicious HTML 已明确：
+   - documented only
+   - 暂不进入 first-batch 默认样本
+5. browser/js-required 已明确：
+   - deferred
+   - 暂不进入 first-batch 默认样本
+6. challenge/gateway 的第一轮 heuristic 已固定为：
+   - 极少数 generic signal bundles
+   - 不允许 site-specific patterns 进入首轮边界
+7. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.7` detector skeleton 实现轮
+8. 本轮仍然只修改文档，不触碰运行时代码路径
+
+当前 3-B.7 detector 最小静态分类骨架实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector.py` 已存在
+2. `backend/app/services/online/detector_skeleton.py` 已存在
+3. `backend/tests/fixtures/online_detector_samples.json` 已存在
+4. `backend/tests/test_online_detector_skeleton.py` 已覆盖：
+   - input schema
+   - output schema
+   - sample fixtures
+   - challenge/gateway 命中
+   - 负样本 no_match
+   - live runtime 零接入边界
+5. detector 当前仍然只在离线静态骨架层工作
+6. `fetch_service.py` / `source_engine.py` 没有接入 detector live path
+7. 3-B.2 / 3-B.3 与 online/import 回归继续通过
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.8` detector live 接缝决策轮
+
+当前 3-B.8 detector live 接缝决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `fetch_service.py`
+   - `response_guard_service.py`
+   - `source_engine.py`
+   - `detector_skeleton.py`
+   - `parser_engine.py`
+   - `content_parse_service.py`
+2. live detector 输入来源方向已固定为：
+   - normalized `DetectorInput`
+   - 由 future thin adapter / coordinator 单点构造
+3. live hook 逻辑接缝已固定为：
+   - `source_engine.py` 所在的 fetch -> parser seam
+   - 而不是直接塞进 `fetch_service.py` 或 parser
+4. 已明确确认：
+   - `fetch_service.py` 的 `status_code >= 400` 早抛错会阻断一部分 future challenge/gateway live classification
+5. future 兼容方向已固定为：
+   - exception-to-summary / fetch-outcome adapter
+   - 当前不进入 transport envelope 实装
+6. `LEGADO_ANTI_BOT_CHALLENGE` / `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 的 `runtime-implemented` 升级门槛已固定
+7. 本轮仍然只修改文档，不触碰任何 live runtime 代码路径
+8. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.9` detector live seam skeleton 决策轮
