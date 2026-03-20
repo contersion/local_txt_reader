@@ -6,9 +6,10 @@
 
 当前最新轮次进一步固定为：
 
-- `Phase 3-B.17`：detector runtime-visible gating 决策轮
-- 默认结论：只做决策、文档、Traceability、错误码分层与测试规划
-- 默认不改代码
+- `Phase 3-B.21`：detector runtime-facing error gate 决策轮
+- 默认结论：只允许最小 runtime-facing-error-gate boundary / traceability / error-code-state / test-planning 文档收口
+- 默认不落代码
+- 默认不改 public behavior
 
 当前目标不是实现复杂请求运行时，而是：
 
@@ -20,7 +21,7 @@
 
 当前默认结论：
 
-> 本轮停留在设计层已经足够推进项目，不需要进入 detector runtime-visible gating 实装。
+> 本轮只允许最小 runtime-facing error gate boundary 决策收口，不进入 runtime-facing error gate 生效。
 
 当前轮次关键决策的完整方案比较，统一记录于：
 
@@ -4609,3 +4610,1139 @@ future 最小 runtime-visible gating 后，允许的行为最多包括：
 - 测试规划
 
 而不进入 runtime-visible gating skeleton 实装。
+
+## 29. 3-B.18 detector runtime-visible minimal gating skeleton 实现结论
+
+### 29.1 当前 minimal runtime-visible gating skeleton 最小落点
+
+按 3-B.17 已冻结的边界，本轮 minimal runtime-visible gating skeleton 的代码落点固定为：
+
+- `backend/app/schemas/online_detector_runtime_visible_gate.py`
+- `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+
+其中：
+
+- `online_detector_runtime_visible_gate.py`
+  - 只负责 higher-layer internal visible gate input / result / signal / noop decision contract
+- `detector_runtime_visible_gating_skeleton.py`
+  - 只负责 gate result -> visible gate input -> visible gate result 的最小 no-op helper
+- `source_engine.py`
+  - 只在现有 minimal gating no-op 调用之后再追加一层更高层 internal carrying
+  - 调用结果继续停留在 internal-only 层
+
+本轮没有把 runtime-visible gating 放进：
+
+- `fetch_service.py`
+- `response_guard_service.py`
+- parser / content_parse
+
+### 29.2 当前已落地什么
+
+当前仓库已经以纯内部、纯 no-op、纯可回退的方式落地了：
+
+- `DetectorRuntimeVisibleGateInput`
+- `DetectorRuntimeVisibleGateSignal`
+- `DetectorRuntimeVisibleGateResult`
+- `DetectorRuntimeVisibleGateOutcome`
+- `DetectorRuntimeVisibleGateDecision`
+- minimal runtime-visible gating helper
+- source-engine 邻接更高层 runtime-visible no-op 调用点
+- runtime-visible gating fixtures
+- visible gate contract / helper / higher-layer carrying / no-behavior-change tests
+
+当前实际代码落点为：
+
+- `backend/app/schemas/online_detector_runtime_visible_gate.py`
+- `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_runtime_visible_gating_samples.json`
+- `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py`
+
+### 29.3 当前 runtime-visible gating skeleton 允许做到什么
+
+本轮当前只允许做到：
+
+- internal visible gate input 被构造
+- internal visible gate result 被构造
+- detector result 被内部携带到更高层 internal boundary
+- visible gate helper 返回 no-op decision
+- source-engine 邻接更高层位置内部调用 visible gating helper
+
+其中 current higher-layer carrying 只表达：
+
+- detector candidate 的 internal surfaced-near-runtime carrying
+- 以及对应 recommended error code 仅作为 internal-only 信息
+
+### 29.4 当前 runtime-visible gating skeleton 明确不做什么
+
+本轮当前仍然 **没有** 落地：
+
+- runtime-visible gating 生效
+- detector live runtime
+- runtime error surface 变化
+- API 输出变化
+- parser / content_parse 行为变化
+- response_guard 行为变化
+- control flow 变化
+- fallback / browser / JS / retry 行为
+- challenge/gateway live detection 上线
+
+当前仍必须明确表述为 **不支持**：
+
+- detector live runtime
+- runtime-visible gating 生效
+- challenge / gateway 的线上 detector
+- suspicious HTML runtime detector
+- browser/js-required runtime detector
+- anti-bot bypass
+- JS / WebView / browser fallback
+
+### 29.5 为什么这仍然不等于 runtime-visible gating 生效
+
+因为本轮新增 visible gating 只做：
+
+- higher-layer internal carrying
+- no-op visible gate decision
+
+它当前 **不**：
+
+- 改 `fetch_service.py` 返回值
+- 改 `response_guard_service.py` 分类结果
+- 改 parser / content_parse 行为
+- 改 router / importer / DB / frontend
+- 改异常 surface
+- surface detector 错误码到 runtime path
+
+并且 `source_engine.py` 中的 visible gating helper 调用仍被内部 no-op guard 包裹：
+
+- 即便 visible gating helper 本身异常
+- 既有返回值与既有异常 surface 仍保持原样
+
+因此本轮正确口径必须是：
+
+> minimal runtime-visible gating skeleton implemented internally, runtime-visible behavior still unchanged
+
+### 29.6 错误码状态结论
+
+本轮没有新增 detector 错误码生命周期状态。
+
+本轮仍继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - `adapter_modeled`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `adapter_modeled`
+
+本轮也不引入：
+
+- `internal_observed`
+- `internal_surfaced`
+- `internal_carried`
+- `internal_surfaced_near_runtime`
+- `runtime-implemented`
+
+作为错误码 lifecycle 新状态。
+
+### 29.7 下一步最小任务
+
+在 3-B.18 之后，最小的下一步建议应是：
+
+- **Phase 3-B.19：detector runtime error surface 决策轮**
+
+该轮只应继续回答：
+
+- 哪类 visible gate result future 有资格 first map to runtime error surface
+- runtime error surface 与 API / parser / response_guard 的真实接缝应该如何定义
+- 为什么仍然不能直接进入 challenge/gateway live support 或 anti-bot bypass
+
+在这一步之前，仍不应直接进入：
+
+- detector live runtime 正式支持
+- runtime-visible gating 生效
+- runtime error surface 变化
+- challenge/gateway live detection 上线
+- browser/js fallback
+- anti-bot bypass
+
+## 30. 3-B.19 detector runtime error surface 决策轮结论
+
+### 30.1 当前仓库还缺什么
+
+在 3-B.18 之后，仓库已经能够稳定证明：
+
+- detector result 可以经过：
+  - `observe_live_entry_from_success_response(...)` / `observe_live_entry_from_fetch_error(...)`
+  - `evaluate_detector_behavior_gate_noop(...)`
+  - `evaluate_detector_runtime_visible_gate_noop(...)`
+- 并最终到达：
+  - `DetectorRuntimeVisibleGateResult.runtime_visible_signal`
+
+但当前仓库仍然 **没有** 任何代码会把这些 internal 结果继续映射为：
+
+- public exception
+- public API error body / response shape
+- `source_engine.py` 对外返回/抛错变化
+- parser / content_parse / response_guard 的新分支
+
+这说明当前最缺的不是 helper，而是对 `runtime error surface` 本身的严格边界定义。
+
+### 30.2 决策 1：`runtime error surface` 的定义
+
+#### 方案 A：只把 public exception / public API error body / 已实际改变控制流的 runtime-facing error category 视为 runtime error surface
+
+优点：
+
+- 术语最清晰
+- 最不容易把 internal carrying 误写成 runtime 已生效
+- 最符合当前仓库证据
+
+缺点：
+
+- 需要单独再定义一个“更靠近 surface 的 internal mapping boundary”
+
+风险：
+
+- 推进上看起来更保守
+
+#### 方案 B：把更高层 internal mapping boundary 也算作广义 runtime error surface 邻接层
+
+优点：
+
+- 便于描述 future mapping 方向
+
+缺点：
+
+- 容易把 internal mapping boundary 和真正 surface 混在一起
+
+风险：
+
+- 后续 AI 容易把 “near surface” 直接写成 “already surfaced”
+
+#### 方案 C：只要比 helper 更高层就都算 runtime error surface
+
+优点：
+
+- 叙述最省事
+
+缺点：
+
+- 基本失去边界意义
+
+风险：
+
+- 最容易造成阶段误导
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+本轮固定：
+
+- `runtime error surface` 只指真正会影响对外异常类型、对外可见错误码、API error body/shape，或上层 service 已实际感知并改变控制流的 runtime-facing error category
+- 以下内容都 **不属于** runtime error surface：
+  - helper 局部变量
+  - internal carried signal
+  - `DetectorGateResult`
+  - `DetectorRuntimeVisibleGateResult`
+  - fixtures/sample 中的 recommended error code
+
+不推荐方案 B 的原因：
+
+- 会把 internal mapping boundary 和 true runtime surface 混在一起
+
+不推荐方案 C 的原因：
+
+- 会直接摧毁整个 3-B 分阶段语义
+
+### 30.3 决策 2：detector result 最小允许接近的层级
+
+#### 方案 A：继续停在 internal carried recommendation only
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 与 3-B.18 的当前状态几乎重叠
+- 下一轮推进空间过小
+
+风险：
+
+- 容易形成文档停滞
+
+#### 方案 B：允许进入 internal surface-candidate mapping layer
+
+优点：
+
+- 能为 future runtime error surface skeleton 提供最小内部落点
+- 仍然不触碰 public exception / API surface
+- 与当前 3-B.18 higher-layer carrying 的结构连续
+
+缺点：
+
+- 需要额外强调“mapping boundary 不是 runtime surface”
+
+风险：
+
+- 如果文档口径不严格，可能被误读为 external behavior change
+
+#### 方案 C：允许直接进入 public exception / public API error surface
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 直接越界进入 runtime-facing behavior change
+
+风险：
+
+- 会让 challenge/gateway 被误写成已对外生效
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+本轮固定：
+
+- detector result future 最多只允许 first approach：
+  - 一个 internal-only `runtime error mapping boundary`
+- 这个 boundary 最多只负责：
+  - 消费 visible gate result
+  - 产出 internal mapping candidate
+- 它仍然 **不是**：
+  - public exception owner
+  - API error body owner
+  - parser / response_guard owner
+  - fallback / browser / JS owner
+
+不推荐方案 A 的原因：
+
+- 它已经不足以成为下一轮的最小有效推进点
+
+不推荐方案 C 的原因：
+
+- 它已经不再是 “mapping discussion”，而是 public behavior change
+
+### 30.4 决策 3：哪些 detector result 可以进入 future error-surface 讨论
+
+#### 方案 A：只允许 challenge / gateway 进入 first-batch discussion
+
+优点：
+
+- 与当前 detector first-batch sample / heuristic 现实一致
+- 推荐错误码已存在且语义较稳定
+
+缺点：
+
+- 覆盖面保守
+
+风险：
+
+- 仍需谨防误写成 live support
+
+#### 方案 B：再加入 suspicious HTML
+
+优点：
+
+- 讨论面更广
+
+缺点：
+
+- false positive 风险明显更高
+- 与站点语义、内容解析语义耦合更强
+
+风险：
+
+- 很容易误伤正常 HTML
+
+#### 方案 C：连 browser-required / js-required 也一起拉入
+
+优点：
+
+- 看起来更完整
+
+缺点：
+
+- 已明显越过当前 3-B 边界
+- 会逼近 3-C / 3-D
+
+风险：
+
+- 直接制造阶段口径漂移
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+本轮固定：
+
+- future runtime-facing mapping discussion first-batch 只允许：
+  - challenge candidate
+  - gateway candidate
+- 它们当前最多只允许以以下形式存在：
+  - recommended only
+  - internal mapping candidate
+  - future gated mapping candidate
+- 以下内容当前继续排除在 runtime-facing mapping discussion 之外：
+  - suspicious HTML
+  - browser-required
+  - js-required
+
+不推荐方案 B 的原因：
+
+- suspicious HTML 当前误判风险与站点语义依赖都明显更高
+
+不推荐方案 C 的原因：
+
+- browser/js-required 会把 3-B 讨论提前拖进 3-C / 3-D
+
+### 30.5 决策 4：错误码何时才有资格进入 runtime-facing 映射讨论
+
+#### 方案 A：只要已有 runtime-visible higher-layer carrying 就可进入 mapping skeleton
+
+优点：
+
+- 推进快
+
+缺点：
+
+- 证据远远不够
+
+风险：
+
+- 容易把 3-B.18 误写成 “almost runtime implemented”
+
+#### 方案 B：必须 additional evidence 齐全后才允许进入
+
+优点：
+
+- 与当前仓库最一致
+- 能把 internal carrying 和 future runtime-facing mapping gate 明确区分
+
+缺点：
+
+- 进入下一轮前需要继续保持保守口径
+
+风险：
+
+- 推进速度看起来较慢
+
+#### 方案 C：等完整 detector live runtime 再讨论
+
+优点：
+
+- 最稳
+
+缺点：
+
+- 过度保守
+- 会让最小 internal mapping skeleton 无法顺序推进
+
+风险：
+
+- 把本可拆开的边界问题再次捆在一起
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+本轮固定：`LEGADO_ANTI_BOT_CHALLENGE` 与 `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 若 future 要进入 runtime-facing mapping skeleton 讨论，仍至少需要满足：
+
+1. 3-B.18 的 runtime-visible higher-layer carrying 已稳定存在，且 no-op 语义清晰
+2. positive / negative / no-regression 证据继续存在并覆盖 success / error path
+3. future internal mapping contract 的 owner、输入、输出都已冻结
+4. public behavior change 尚未发生，但“为什么这仍不是 public behavior”已能被文档和测试清楚证明
+5. parser / response_guard / API / exception surface 继续与 detector mapping boundary 隔离
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都仍然只能保持：
+
+- `adapter_modeled`
+
+不推荐方案 A 的原因：
+
+- 仅凭 visible carrying 还不足以支撑 runtime-facing 讨论
+
+不推荐方案 C 的原因：
+
+- 会把 “internal mapping boundary” 这一步完全抹掉
+
+### 30.6 决策 5：下一轮最小可执行任务
+
+#### 方案 A：继续只做 mapping 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 3-B.19 已经把最关键的 runtime surface boundary 固定完了
+- 再纯文档一轮会明显重复
+
+风险：
+
+- 推进停滞
+
+#### 方案 B：进入 minimal runtime error surface skeleton 实现（仅 internal mapping contract / no-op mapping）
+
+优点：
+
+- 与当前仓库证据链最连续
+- 仍然可以严格保持 no-behavior-change
+- 有利于验证 internal mapping boundary 的最小可回退结构
+
+缺点：
+
+- 需要非常严格的命名和测试保护
+
+风险：
+
+- 若口径失守，会被误写成 detector error 已可对外抛出
+
+#### 方案 C：直接进入 detector 错误码最小 runtime-facing 实装
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 已经直接进入 runtime-facing behavior change
+
+风险：
+
+- 极易造成 public exception / API surface 污染
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小集合应固定为：
+
+- 一个 internal-only runtime error mapping input/result contract
+- 一个 visible gate result -> internal mapping candidate 的 no-op helper
+- 一个 `source_engine.py` 邻接的 internal mapping 调用点
+- 对应的 no-behavior-change / no-exception-surface-change / no-api-surface-change 测试
+
+下一轮仍然 **不允许** 进入：
+
+- public exception change
+- public API error shape change
+- challenge/gateway 对外抛错
+- parser / response_guard 联动
+- anti-bot bypass
+- browser / JS fallback
+
+### 30.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**。
+
+原因：
+
+- 当前仓库已经有足够证据证明 detector result 最多到达 `runtime_visible_signal`
+- 当前最危险的歧义不在 helper 缺失，而在 runtime surface 术语边界
+- 3-B.19 已足够为下一轮最小 internal mapping skeleton 收敛边界
+
+#### Step 2：如果主张本轮必须落代码，是否已经有充分证明
+
+结论：**没有**。
+
+当前仍无法证明：
+
+- 不落代码会阻塞 3-B.19 结论形成
+- 本轮存在一个最小不可再小、且不被误写成 runtime-facing behavior 的代码集合
+- 本轮代码不会污染 `source_engine.py` 的对外异常/返回语义
+
+因此 3-B.19 正确停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 runtime error surface skeleton 实装。
+
+## 31. 3-B.20 detector runtime error surface minimal skeleton 实现结论
+
+### 31.1 当前 minimal runtime error surface skeleton 的最小落点
+
+按 3-B.19 已冻结的边界，本轮 minimal runtime error surface skeleton 的代码落点固定为：
+
+- `backend/app/schemas/online_detector_runtime_error_mapping.py`
+- `backend/app/services/online/detector_runtime_error_mapping_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+
+其中：
+
+- `online_detector_runtime_error_mapping.py`
+  - 只负责 internal mapping input / candidate / result / noop decision contract
+- `detector_runtime_error_mapping_skeleton.py`
+  - 只负责 visible gate result -> mapping input -> mapping result 的最小 no-op helper
+- `source_engine.py`
+  - 只在现有 runtime-visible gating no-op 调用之后再追加一层更高层 internal mapping carrying
+  - 调用结果继续停留在 internal-only 层
+
+本轮没有把 runtime error mapping 放进：
+
+- `fetch_service.py`
+- `response_guard_service.py`
+- parser / content_parse
+
+### 31.2 当前已落地什么
+
+当前仓库已经以纯内部、纯 no-op、纯可回退的方式落地了：
+
+- `DetectorRuntimeErrorMappingInput`
+- `DetectorRuntimeErrorMappingCandidateKind`
+- `DetectorRuntimeErrorMappingCandidate`
+- `DetectorRuntimeErrorMappingResult`
+- `DetectorRuntimeErrorMappingOutcome`
+- `DetectorRuntimeErrorMappingDecision`
+- minimal runtime error mapping helper
+- source-engine 邻接更高层 runtime error mapping no-op 调用点
+- runtime error mapping fixtures
+- mapping contract / helper / higher-layer candidate carrying / no-behavior-change tests
+
+当前实际代码落点为：
+
+- `backend/app/schemas/online_detector_runtime_error_mapping.py`
+- `backend/app/services/online/detector_runtime_error_mapping_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_runtime_error_mapping_samples.json`
+- `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py`
+
+### 31.3 当前 runtime error mapping skeleton 允许做到什么
+
+本轮当前只允许做到：
+
+- internal mapping input 被构造
+- internal mapping result 被构造
+- detector result 被内部携带到一个更靠近 runtime error surface 的 internal mapping boundary
+- mapping helper 返回 no-op decision
+- source-engine 邻接更高层位置内部调用 runtime error mapping helper
+
+其中 current higher-layer mapping carrying 只表达：
+
+- challenge / gateway detector candidate 的 internal mapping candidate carrying
+- 对应 recommended error code 仅作为 internal-only 信息
+- 当前 helper 已经可以区分：
+  - `no_mapping_candidate`
+  - `mapping_candidate_carried`
+
+### 31.4 当前 runtime error mapping skeleton 明确不做什么
+
+本轮当前仍然 **没有** 落地：
+
+- runtime error surface 生效
+- detector live runtime
+- public exception surface 变化
+- API 输出变化
+- parser / content_parse 行为变化
+- response_guard 行为变化
+- control flow 变化
+- fallback / browser / JS / retry 行为
+- challenge/gateway live detection 上线
+
+当前仍必须明确表述为 **不支持**：
+
+- detector live runtime
+- runtime error surface 生效
+- challenge / gateway 的线上 detector
+- suspicious HTML runtime detector
+- browser/js-required runtime detector
+- anti-bot bypass
+- JS / WebView / browser fallback
+
+### 31.5 为什么这仍然不等于 runtime error surface 生效
+
+因为本轮新增 runtime error mapping 只做：
+
+- internal mapping candidate carrying
+- no-op mapping decision
+
+它当前 **不**：
+
+- 改 `fetch_service.py` 返回值
+- 改 `response_guard_service.py` 分类结果
+- 改 parser / content_parse 行为
+- 改 router / importer / DB / frontend
+- 改异常 surface
+- surface detector 错误码到 runtime path
+
+并且 `source_engine.py` 中的 runtime error mapping helper 调用仍被内部 no-op guard 包裹：
+
+- 即便 mapping helper 本身异常
+- 既有返回值与既有异常 surface 仍保持原样
+
+因此本轮正确口径必须是：
+
+> minimal runtime error surface skeleton implemented internally, runtime error surface behavior still unchanged
+
+### 31.6 错误码状态结论
+
+本轮没有新增 detector 错误码 lifecycle 状态。
+
+本轮仍继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+  - `adapter_modeled`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+  - `adapter_modeled`
+
+本轮也不引入：
+
+- `internal_mapped`
+- `surface_candidate_carried`
+- `runtime-facing_candidate`
+- `runtime-implemented`
+
+作为错误码 lifecycle 新状态。
+
+原因是：
+
+- 当前 internal mapping skeleton 只证明“candidate 被更高层 internal boundary 看见了”
+- 并没有证明 detector 错误码已经会对外抛出
+
+### 31.7 下一步最小任务
+
+在 3-B.20 之后，最小的下一步建议应是：
+
+- **Phase 3-B.21：detector runtime-facing error gate 决策轮**
+
+该轮只应继续回答：
+
+- 哪类 internal mapping candidate future 有资格 first approach runtime-facing error gate
+- runtime-facing error gate 与 public exception / API / parser / response_guard 的真实接缝应该如何定义
+- 为什么仍然不能直接进入 challenge/gateway live support 或 anti-bot bypass
+
+在这一步之前，仍不应直接进入：
+
+- detector live runtime 正式支持
+- runtime error surface 生效
+- detector 错误码对外抛出
+- challenge/gateway live detection 上线
+- browser/js fallback
+- anti-bot bypass
+
+## 32. 3-B.21 detector runtime-facing error gate 决策轮结论
+
+### 32.1 当前仓库还缺什么
+
+在 3-B.20 之后，仓库已经能够稳定证明：
+
+- detector result 可以经过：
+  - live-entry observation
+  - minimal gating carrying
+  - runtime-visible carrying
+  - runtime error mapping candidate carrying
+- 并最终到达：
+  - `DetectorRuntimeErrorMappingResult.mapping_candidate`
+
+但当前仓库仍然 **没有** 任何代码会把这些 internal 结果继续送入：
+
+- 某个“最后 internal gate owner”
+- public exception owner
+- public API error body / shape owner
+- 任何会改变 `source_engine.py` return / raise 的 runtime-facing decision
+
+这说明当前最缺的不是新的 helper，而是对 `runtime-facing error gate` 本身的术语、层级和候选范围做最后一次严格冻结。
+
+### 32.2 决策 1：`runtime-facing error gate` 的定义
+
+#### 方案 A：仅 public exception / public API error body 前的最后 internal gate 属于 runtime-facing error gate
+
+优点：
+
+- 术语最清晰
+- 最不容易把 internal mapping candidate 误写成 runtime 已生效
+- 最符合当前仓库分层
+
+缺点：
+
+- 需要额外说明“哪些 internal result 仍只是邻接层，不是 gate 本身”
+
+风险：
+
+- 推进上看起来更保守
+
+#### 方案 B：更高层 internal mapping boundary 也算广义 runtime-facing gate 邻接层
+
+优点：
+
+- 便于描述 future 过渡关系
+
+缺点：
+
+- 容易把 mapping boundary 和真正 gate 混在一起
+
+风险：
+
+- 后续 AI 容易把 “near gate” 直接写成 “already runtime-facing”
+
+#### 方案 C：只要比 helper 更高层都算 runtime-facing gate
+
+优点：
+
+- 叙述最省事
+
+缺点：
+
+- 几乎失去边界意义
+
+风险：
+
+- 阶段口径最容易崩掉
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+本轮固定：
+
+- `runtime-facing error gate` 只指：
+  - public exception / public API error surface 之前的最后一个 internal gate
+  - 某个 future internal owner deciding whether detector candidate may approach external error behavior
+  - runtime-facing mapping decision 之前的最后 internal boundary
+- 以下内容都 **不属于** runtime-facing error gate：
+  - helper 局部变量
+  - internal carried signal
+  - `DetectorRuntimeVisibleGateResult`
+  - `DetectorRuntimeErrorMappingResult`
+  - tests / fixtures 中的 recommended error code
+
+不推荐方案 B 的原因：
+
+- 会把邻接层和 gate 本体混在一起
+
+不推荐方案 C 的原因：
+
+- 会直接摧毁整个 3-B 的阶段术语体系
+
+### 32.3 决策 2：detector result / mapping candidate 最小允许接近的层级
+
+#### 方案 A：继续停在 internal mapping candidate
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 与 3-B.20 当前状态几乎重叠
+- 下一轮推进空间过小
+
+风险：
+
+- 容易形成文档停滞
+
+#### 方案 B：允许进入 internal runtime-facing gate boundary
+
+优点：
+
+- 能为 future runtime-facing error gate skeleton 提供最小内部落点
+- 仍然不触碰 public exception / API surface
+- 与当前 3-B.20 mapping candidate 结构连续
+
+缺点：
+
+- 需要额外强调“gate boundary 不是 runtime-facing behavior”
+
+风险：
+
+- 若文档口径不严，可能被误读为 external behavior change
+
+#### 方案 C：允许进入 public exception / public response surface 试探接近
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 直接越界进入 runtime-facing behavior change
+
+风险：
+
+- 会让 challenge/gateway 被误写成已对外生效
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+本轮固定：
+
+- detector result / mapping candidate future 最多只允许 first approach：
+  - 一个 internal-only `runtime-facing error gate boundary`
+- 这个 boundary 最多只负责：
+  - 消费 internal mapping candidate
+  - 产出 internal gate candidate / no-op gate decision
+- 它仍然 **不是**：
+  - public exception owner
+  - API error body owner
+  - parser / response_guard owner
+  - fallback / browser / JS owner
+
+不推荐方案 A 的原因：
+
+- 它已经不足以成为下一轮的最小有效推进点
+
+不推荐方案 C 的原因：
+
+- 它已经不再是 gate discussion，而是 public behavior change
+
+### 32.4 决策 3：哪些 candidate 可以进入 future runtime-facing gate 讨论
+
+#### 方案 A：只允许 challenge / gateway 进入 first-batch discussion
+
+优点：
+
+- 与当前 detector first-batch sample / heuristic / mapping candidate 现实一致
+- 推荐错误码已存在且语义相对稳定
+
+缺点：
+
+- 覆盖面保守
+
+风险：
+
+- 仍需谨防误写成 live support
+
+#### 方案 B：再加 suspicious HTML
+
+优点：
+
+- 讨论面更广
+
+缺点：
+
+- false positive 风险更高
+- 与站点语义、内容解析语义耦合更强
+
+风险：
+
+- 很容易误伤正常 HTML
+
+#### 方案 C：再把 browser-required / js-required 也拉进来
+
+优点：
+
+- 看起来更完整
+
+缺点：
+
+- 已明显越过当前 3-B 边界
+- 会逼近 3-C / 3-D
+
+风险：
+
+- 直接制造阶段口径漂移
+
+#### 推荐结论
+
+推荐 **方案 A**。
+
+本轮固定：
+
+- future runtime-facing gate discussion first-batch 只允许：
+  - challenge candidate
+  - gateway candidate
+- 它们当前最多只允许以以下形式存在：
+  - recommended only
+  - internal mapping candidate
+  - internal runtime-facing gate candidate
+- 以下内容当前继续排除在 runtime-facing gate discussion 之外：
+  - suspicious HTML
+  - browser-required
+  - js-required
+
+不推荐方案 B 的原因：
+
+- suspicious HTML 当前误判风险与站点语义依赖都明显更高
+
+不推荐方案 C 的原因：
+
+- browser/js-required 会把 3-B 讨论提前拖进 3-C / 3-D
+
+### 32.5 决策 4：错误码何时才有资格进入 runtime-facing gate 讨论
+
+#### 方案 A：只要已有 runtime error mapping candidate 就可进入 gate skeleton
+
+优点：
+
+- 推进快
+
+缺点：
+
+- 证据远远不够
+
+风险：
+
+- 容易把 3-B.20 误写成 almost runtime implemented
+
+#### 方案 B：必须 additional evidence 齐全后才允许进入
+
+优点：
+
+- 与当前仓库最一致
+- 能把 internal mapping candidate 和 future runtime-facing gate 明确区分
+
+缺点：
+
+- 进入下一轮前需要继续保持保守口径
+
+风险：
+
+- 推进速度看起来较慢
+
+#### 方案 C：等完整 detector live runtime 再讨论
+
+优点：
+
+- 最稳
+
+缺点：
+
+- 过度保守
+- 会让最小 internal gate skeleton 无法顺序推进
+
+风险：
+
+- 把本可拆开的边界问题再次捆在一起
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+本轮固定：`LEGADO_ANTI_BOT_CHALLENGE` 与 `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 若 future 要进入 runtime-facing gate skeleton 讨论，仍至少需要满足：
+
+1. 3-B.20 的 higher-layer internal mapping candidate carrying 已稳定存在，且 no-op 语义清晰
+2. positive / negative / no-regression 证据继续存在并覆盖 success / error path
+3. future internal runtime-facing gate contract 的 owner、输入、输出都已冻结
+4. public behavior change 尚未发生，但“为什么这仍不是 public behavior”已能被文档和测试清楚证明
+5. parser / response_guard / API / exception surface 继续与 detector gate boundary 隔离
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都仍然只能保持：
+
+- `adapter_modeled`
+
+不推荐方案 A 的原因：
+
+- 仅凭 mapping candidate 还不足以支撑 runtime-facing gate 讨论
+
+不推荐方案 C 的原因：
+
+- 会把 “internal runtime-facing gate boundary” 这一步完全抹掉
+
+### 32.6 决策 5：下一轮最小可执行任务
+
+#### 方案 A：继续只做 runtime-facing gate 文档设计
+
+优点：
+
+- 最保守
+
+缺点：
+
+- 3-B.21 已经把最关键的 gate boundary 固定完了
+- 再纯文档一轮会明显重复
+
+风险：
+
+- 推进停滞
+
+#### 方案 B：进入 minimal runtime-facing error gate skeleton 实现（仅 internal gate contract / no-op gate）
+
+优点：
+
+- 与当前仓库证据链最连续
+- 仍然可以严格保持 no-behavior-change
+- 有利于验证 internal gate boundary 的最小可回退结构
+
+缺点：
+
+- 需要非常严格的命名和测试保护
+
+风险：
+
+- 若口径失守，会被误写成 detector error 已可对外抛出
+
+#### 方案 C：直接进入 detector 错误码最小 runtime-facing 生效实装
+
+优点：
+
+- 推进最快
+
+缺点：
+
+- 已经直接进入 runtime-facing behavior change
+
+风险：
+
+- 极易造成 public exception / API surface 污染
+
+#### 推荐结论
+
+推荐 **方案 B**。
+
+下一轮最小不可再小集合应固定为：
+
+- 一个 internal-only runtime-facing gate input/result contract
+- 一个 mapping candidate -> internal gate candidate 的 no-op helper
+- 一个 `source_engine.py` 邻接的 internal gate 调用点
+- 对应的 no-behavior-change / no-exception-surface-change / no-api-surface-change 测试
+
+下一轮仍然 **不允许** 进入：
+
+- public exception change
+- public API error shape change
+- challenge/gateway 对外抛错
+- parser / response_guard 联动
+- anti-bot bypass
+- browser / JS fallback
+
+### 32.7 Step 1 / Step 2 判断
+
+#### Step 1：如果本轮只做文档、决策与测试规划，是否已经足够
+
+结论：**足够**。
+
+原因：
+
+- 当前仓库已经有足够证据证明 detector result 最多到达 `mapping_candidate`
+- 当前最危险的歧义不在 helper 缺失，而在 runtime-facing gate 术语边界
+- 3-B.21 已足够为下一轮最小 internal gate skeleton 收敛边界
+
+#### Step 2：如果主张本轮必须落代码，是否已经有充分证明
+
+结论：**没有**。
+
+当前仍无法证明：
+
+- 不落代码会阻塞 3-B.21 结论形成
+- 本轮存在一个最小不可再小、且不被误写成 runtime-facing behavior 的代码集合
+- 本轮代码不会污染 `source_engine.py` 的对外异常/返回语义
+
+因此 3-B.21 正确停留在：
+
+- 文档
+- Traceability
+- 错误码状态
+- 测试规划
+
+而不进入 runtime-facing error gate skeleton 实装。

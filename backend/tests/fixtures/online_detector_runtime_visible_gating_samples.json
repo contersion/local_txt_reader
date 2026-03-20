@@ -1,0 +1,249 @@
+[
+  {
+    "sample_id": "challenge-visible-signal-carried",
+    "gate_result": {
+      "outcome": "signal_carried",
+      "gate_decision": "gate_decision_noop",
+      "gate_input": {
+        "stage": "search",
+        "expected_response_type": "html",
+        "adapter_output": {
+          "outcome": "detector_result_attached",
+          "adapter_input": {
+            "stage": "search",
+            "expected_response_type": "html",
+            "fetch_outcome_summary": {
+              "stage": "search",
+              "expected_response_type": "html",
+              "requested_url": "https://example.com/search?q=test",
+              "fetch_outcome_kind": "success",
+              "final_url": "https://example.com/search?q=test",
+              "status_code": 200,
+              "content_type": "text/html; charset=utf-8",
+              "redirected": false,
+              "body_text_preview": "<html><body>Checking your browser. Enable JavaScript and cookies to continue.</body></html>",
+              "body_text_length": 86
+            }
+          },
+          "detector_input": {
+            "stage": "search",
+            "expected_response_type": "html",
+            "requested_url": "https://example.com/search?q=test",
+            "final_url": "https://example.com/search?q=test",
+            "status_code": 200,
+            "content_type": "text/html; charset=utf-8",
+            "redirected": false,
+            "body_text_preview": "<html><body>Checking your browser. Enable JavaScript and cookies to continue.</body></html>",
+            "body_text_length": 86
+          },
+          "detector_result": {
+            "category": "challenge_candidate",
+            "status": "candidate_match",
+            "matched_signals": [
+              "challenge_browser_check",
+              "challenge_js_cookie_continue"
+            ],
+            "evidence_snippets": [
+              "challenge_browser_check,challenge_js_cookie_continue :: <html><body>Checking your browser. Enable JavaScript and cookies to continue.</body></html>"
+            ],
+            "recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE",
+            "deferred_requirement_hint": "none"
+          }
+        },
+        "detector_result": {
+          "category": "challenge_candidate",
+          "status": "candidate_match",
+          "matched_signals": [
+            "challenge_browser_check",
+            "challenge_js_cookie_continue"
+          ],
+          "evidence_snippets": [
+            "challenge_browser_check,challenge_js_cookie_continue :: <html><body>Checking your browser. Enable JavaScript and cookies to continue.</body></html>"
+          ],
+          "recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE",
+          "deferred_requirement_hint": "none"
+        },
+        "recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE"
+      },
+      "carried_signal": {
+        "category": "challenge_candidate",
+        "status": "candidate_match",
+        "recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE"
+      }
+    },
+    "expected_visible_outcome": "visible_signal_carried",
+    "expected_recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE"
+  },
+  {
+    "sample_id": "gateway-visible-signal-carried",
+    "gate_result": {
+      "outcome": "signal_carried",
+      "gate_decision": "gate_decision_noop",
+      "gate_input": {
+        "stage": "detail",
+        "expected_response_type": "html",
+        "adapter_output": {
+          "outcome": "detector_result_attached",
+          "adapter_input": {
+            "stage": "detail",
+            "expected_response_type": "html",
+            "fetch_outcome_summary": {
+              "stage": "detail",
+              "expected_response_type": "html",
+              "requested_url": "https://example.com/books/1",
+              "fetch_outcome_kind": "http_error",
+              "final_url": "https://example.com/blocked",
+              "status_code": 403,
+              "content_type": "text/html; charset=utf-8",
+              "redirected": true,
+              "body_text_preview": "<html><body>Access denied. Request blocked by security rules from the web application firewall.</body></html>",
+              "body_text_length": 108
+            }
+          },
+          "detector_input": {
+            "stage": "detail",
+            "expected_response_type": "html",
+            "requested_url": "https://example.com/books/1",
+            "final_url": "https://example.com/blocked",
+            "status_code": 403,
+            "content_type": "text/html; charset=utf-8",
+            "redirected": true,
+            "body_text_preview": "<html><body>Access denied. Request blocked by security rules from the web application firewall.</body></html>",
+            "body_text_length": 108
+          },
+          "detector_result": {
+            "category": "gateway_candidate",
+            "status": "candidate_match",
+            "matched_signals": [
+              "gateway_access_denied",
+              "gateway_request_blocked",
+              "gateway_security_rules",
+              "gateway_firewall_wording",
+              "gateway_status_support",
+              "gateway_path_hint"
+            ],
+            "evidence_snippets": [
+              "gateway_access_denied,gateway_request_blocked,gateway_security_rules,gateway_firewall_wording,gateway_status_support,gateway_path_hint :: <html><body>Access denied. Request blocked by security rules from the web application firewall.</body></html>"
+            ],
+            "recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY",
+            "deferred_requirement_hint": "none"
+          }
+        },
+        "detector_result": {
+          "category": "gateway_candidate",
+          "status": "candidate_match",
+          "matched_signals": [
+            "gateway_access_denied",
+            "gateway_request_blocked",
+            "gateway_security_rules",
+            "gateway_firewall_wording",
+            "gateway_status_support",
+            "gateway_path_hint"
+          ],
+          "evidence_snippets": [
+            "gateway_access_denied,gateway_request_blocked,gateway_security_rules,gateway_firewall_wording,gateway_status_support,gateway_path_hint :: <html><body>Access denied. Request blocked by security rules from the web application firewall.</body></html>"
+          ],
+          "recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY",
+          "deferred_requirement_hint": "none"
+        },
+        "recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY"
+      },
+      "carried_signal": {
+        "category": "gateway_candidate",
+        "status": "candidate_match",
+        "recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY"
+      }
+    },
+    "expected_visible_outcome": "visible_signal_carried",
+    "expected_recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY"
+  },
+  {
+    "sample_id": "no-visible-signal",
+    "gate_result": {
+      "outcome": "no_signal",
+      "gate_decision": "gate_decision_noop",
+      "gate_input": {
+        "stage": "search",
+        "expected_response_type": "html",
+        "adapter_output": {
+          "outcome": "detector_result_attached",
+          "adapter_input": {
+            "stage": "search",
+            "expected_response_type": "html",
+            "fetch_outcome_summary": {
+              "stage": "search",
+              "expected_response_type": "html",
+              "requested_url": "https://example.com/search?q=test",
+              "fetch_outcome_kind": "success",
+              "final_url": "https://example.com/search?q=test",
+              "status_code": 200,
+              "content_type": "text/html; charset=utf-8",
+              "redirected": false,
+              "body_text_preview": "<html><body><div class=\"result-item\">ok</div></body></html>",
+              "body_text_length": 57
+            }
+          },
+          "detector_input": {
+            "stage": "search",
+            "expected_response_type": "html",
+            "requested_url": "https://example.com/search?q=test",
+            "final_url": "https://example.com/search?q=test",
+            "status_code": 200,
+            "content_type": "text/html; charset=utf-8",
+            "redirected": false,
+            "body_text_preview": "<html><body><div class=\"result-item\">ok</div></body></html>",
+            "body_text_length": 57
+          },
+          "detector_result": {
+            "category": "no_match",
+            "status": "no_match",
+            "matched_signals": [],
+            "evidence_snippets": [],
+            "recommended_error_code": null,
+            "deferred_requirement_hint": "none"
+          }
+        },
+        "detector_result": {
+          "category": "no_match",
+          "status": "no_match",
+          "matched_signals": [],
+          "evidence_snippets": [],
+          "recommended_error_code": null,
+          "deferred_requirement_hint": "none"
+        },
+        "recommended_error_code": null
+      }
+    },
+    "expected_visible_outcome": "no_visible_signal",
+    "expected_recommended_error_code": null
+  },
+  {
+    "sample_id": "noop-visible-signal",
+    "gate_result": {
+      "outcome": "no_signal",
+      "gate_decision": "gate_decision_noop",
+      "gate_input": {
+        "stage": "content",
+        "expected_response_type": "html",
+        "adapter_output": {
+          "outcome": "noop",
+          "adapter_input": {
+            "stage": "content",
+            "expected_response_type": "html",
+            "fetch_outcome_summary": {
+              "stage": "content",
+              "expected_response_type": "html",
+              "requested_url": "https://example.com/books/1/ch1",
+              "fetch_outcome_kind": "transport_error",
+              "exception_kind": "timeout"
+            }
+          }
+        },
+        "detector_result": null,
+        "recommended_error_code": null
+      }
+    },
+    "expected_visible_outcome": "no_visible_signal",
+    "expected_recommended_error_code": null
+  }
+]

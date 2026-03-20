@@ -1099,6 +1099,91 @@ challenge/gateway 仍然 **不应仅因这些结构存在** 就升级为：
 
 - `adapter_modeled`
 
+## 4.18 3-B.18 minimal runtime-visible gating skeleton 实装后的错误码状态结论
+
+本轮进入代码的是：
+
+- higher-layer internal visible gate input contract
+- higher-layer internal visible gate result / signal / noop decision contract
+- minimal runtime-visible gating helper
+- source-engine 邻接更高层的 internal carrying
+
+本轮**不是**：
+
+- runtime-visible gating 生效
+- runtime error surface 变更
+- detector 错误码对外抛出
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.18.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 本轮虽然让 detector result 进入了更高层 internal boundary
+- 也虽然允许 higher-layer internal carrying / no-op visible gate decision 存在
+- 但 detector 结果仍然没有进入 runtime-visible gating 生效
+- 更没有进入 runtime error surface
+
+### 4.18.2 higher-layer internal carrying 不是新的错误码生命周期状态
+
+本轮允许存在：
+
+- higher-layer internal carrying
+- internal surfaced-near-runtime carrying
+
+但它们只应被理解为：
+
+- runtime-visible gate-layer internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_observed`
+- `internal_surfaced`
+- `internal_carried`
+- `internal_surfaced_near_runtime`
+- `visible_signal_carried`
+- 其他新的错误码 lifecycle 状态
+
+### 4.18.3 future runtime error surface 前仍需满足的条件
+
+即使 3-B.18 已完成 minimal runtime-visible gating skeleton，challenge/gateway future 若要靠近 runtime error surface，仍至少需要满足：
+
+1. 哪类 visible gate result 允许 first map to runtime error surface 已被单独决策
+2. runtime error surface 与 API / parser / response_guard 的关系已冻结
+3. public behavior 变化已被单独评估并可稳定复现
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
 ## 4.14 3-B.14 live-entry skeleton 实装后的错误码状态结论
 
 本轮进入代码的是：
@@ -1170,6 +1255,285 @@ challenge/gateway 仍然 **不应仅因这些结构存在** 就升级为：
    - classification only
    - not bypass
    - not browser/js runtime support
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+## 4.19 3-B.19 runtime error surface 决策后的错误码状态结论
+
+本轮只固定：
+
+- `runtime error surface` 的严格定义
+- detector result future 最多只允许 first approach 的 internal mapping boundary
+- 哪些 detector candidate 可以进入 future runtime-facing mapping discussion
+- detector 候选错误码进入 future runtime-facing mapping discussion 前仍需满足的门槛
+
+本轮**不是**：
+
+- runtime error surface 代码
+- detector 错误码对外抛出
+- public exception change
+- public API error body change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.19.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 3-B.18 当前最多只证明了 higher-layer internal visible carrying
+- 3-B.19 当前只冻结了 runtime error surface boundary
+- 当前既没有 runtime error surface mapping 代码
+- 也没有 public exception / API surface change
+
+### 4.19.2 runtime error surface 决策本身不构成错误码升级条件
+
+3-B.19 明确固定：
+
+- `runtime error surface` 只指真正会影响 public exception、public API error body/shape，或已实际改变控制流的 runtime-facing error category
+
+因此以下内容都 **不应** 被理解为：
+
+- `runtime-implemented`
+
+包括但不限于：
+
+- internal carried signal
+- `DetectorGateResult`
+- `DetectorRuntimeVisibleGateResult`
+- internal mapping candidate
+- fixtures/sample 中的 recommended error code
+
+### 4.19.3 允许进入 future runtime-facing mapping discussion 的范围仍然很窄
+
+当前 only first-batch discussion candidate 固定为：
+
+- challenge
+- gateway
+
+以下内容当前继续 **不** 进入 future runtime-facing mapping discussion：
+
+- `LEGADO_SUSPICIOUS_HTML_RESPONSE`
+  - 继续保持：`documented_only`
+- `LEGADO_BROWSER_STATE_REQUIRED`
+  - 继续保持：`deferred`
+- `LEGADO_JS_EXECUTION_REQUIRED`
+  - 继续保持：`deferred`
+
+原因是：
+
+- suspicious HTML 的误判风险与站点语义依赖仍明显更高
+- browser/js-required 已经越过当前 3-B 讨论边界，属于 future 3-C / 3-D
+
+### 4.19.4 future runtime-facing mapping discussion 前仍需满足的条件
+
+即使 3-B.19 已完成 runtime error surface 决策，challenge/gateway future 若要进入 runtime-facing mapping skeleton 讨论，仍至少需要满足：
+
+1. 3-B.18 的 runtime-visible higher-layer carrying 已稳定存在，且 no-op 语义清晰
+2. success / error path 的 positive / negative / no-regression 证据继续存在
+3. future internal mapping contract 的 owner、输入、输出与职责边界已冻结
+4. 文档与测试都能明确证明：
+   - internal mapping boundary 不是 public exception
+   - internal mapping boundary 不是 API error body
+   - internal mapping boundary 不是 parser / response_guard owner
+5. challenge/gateway 仍未对外抛出，public behavior 仍未发生变化
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+### 4.19.5 下一轮若进入最小 skeleton，实现也不等于 runtime-implemented
+
+即使下一轮进入 future minimal runtime error surface skeleton，实现了：
+
+- internal-only runtime error mapping contract
+- visible gate result -> internal mapping candidate 的 no-op helper
+- `source_engine.py` 邻接的 internal mapping 调用点
+
+challenge/gateway 仍然 **不应仅因这些结构存在** 就升级为：
+
+- `runtime-implemented`
+
+除非后续又单独证明：
+
+- public exception / API surface owner 已冻结
+- runtime-facing behavior change 已被明确允许
+- 对外 error surface 的稳定回归与 no-regression 证据存在
+
+## 4.20 3-B.20 runtime error surface minimal skeleton 实装后的错误码状态结论
+
+本轮进入代码的是：
+
+- internal runtime error mapping input contract
+- internal runtime error mapping candidate / result / noop decision contract
+- minimal runtime error mapping helper
+- source-engine 邻接更高层的 internal mapping carrying
+
+本轮**不是**：
+
+- runtime error surface 生效
+- detector 错误码对外抛出
+- public exception change
+- public API error body change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.20.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 本轮虽然让 detector result 进入了更高层 internal mapping boundary
+- 也虽然允许 internal mapping candidate / no-op mapping decision 存在
+- 但 detector 结果仍然没有进入 runtime error surface 生效
+- 更没有进入 public exception / API surface
+
+### 4.20.2 internal mapping candidate 不是新的错误码生命周期状态
+
+本轮允许存在：
+
+- higher-layer internal mapping candidate carrying
+- internal mapping decision noop
+
+但它们只应被理解为：
+
+- runtime error mapping boundary 的 internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_mapped`
+- `runtime_surface_candidate`
+- `runtime-facing_candidate`
+- 其他新的错误码 lifecycle 状态
+
+### 4.20.3 future runtime-facing error gate 前仍需满足的条件
+
+即使 3-B.20 已完成 minimal runtime error surface skeleton，challenge/gateway future 若要靠近 runtime-facing error gate，仍至少需要满足：
+
+1. 哪类 internal mapping candidate 允许 first approach runtime-facing error gate 已被单独决策
+2. runtime-facing error gate 与 public exception / API / parser / response_guard 的关系已冻结
+3. public behavior 变化已被单独评估并可稳定复现
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+## 4.21 3-B.21 runtime-facing error gate 决策后的错误码状态结论
+
+本轮只固定：
+
+- `runtime-facing error gate` 的严格定义
+- detector result future 最多只允许 first approach 的 internal runtime-facing gate boundary
+- 哪些 detector candidate 可以进入 future runtime-facing gate discussion
+- detector 候选错误码进入 future runtime-facing gate discussion 前仍需满足的门槛
+
+本轮**不是**：
+
+- runtime-facing error gate 代码
+- detector 错误码对外抛出
+- public exception change
+- public API error body change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.21.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 3-B.20 当前最多只证明了 higher-layer internal mapping candidate carrying
+- 3-B.21 当前只冻结了 runtime-facing error gate boundary
+- 当前既没有 runtime-facing error gate 代码
+- 也没有 public exception / API surface change
+
+### 4.21.2 runtime-facing error gate 决策本身不构成错误码升级条件
+
+3-B.21 明确固定：
+
+- `runtime-facing error gate` 只指真正位于 public exception、public API error body/shape 之前的最后一个 internal gate
+
+因此以下内容都 **不应** 被理解为：
+
+- `runtime-implemented`
+
+包括但不限于：
+
+- internal carried signal
+- `DetectorRuntimeVisibleGateResult`
+- `DetectorRuntimeErrorMappingResult`
+- internal gate candidate
+- fixtures/sample 中的 recommended error code
+
+### 4.21.3 future runtime-facing gate discussion 前仍需满足的条件
+
+即使 3-B.21 已完成 runtime-facing error gate 决策，challenge/gateway future 若要进入 runtime-facing gate skeleton 讨论，仍至少需要满足：
+
+1. 3-B.20 的 higher-layer internal mapping candidate carrying 已稳定存在，且 no-op 语义清晰
+2. success / error path 的 positive / negative / no-regression 证据继续存在
+3. future internal runtime-facing gate contract 的 owner、输入、输出与职责边界已冻结
+4. 文档与测试都能明确证明：
+   - internal gate boundary 不是 public exception
+   - internal gate boundary 不是 API error body
+   - internal gate boundary 不是 parser / response_guard owner
+5. challenge/gateway 仍未对外抛出，public behavior 仍未发生变化
 
 在这些条件满足之前：
 

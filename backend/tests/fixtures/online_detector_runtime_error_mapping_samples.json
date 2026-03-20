@@ -1,0 +1,30 @@
+[
+  {
+    "sample_id": "challenge-mapping-candidate-carried",
+    "runtime_visible_sample_id": "challenge-visible-signal-carried",
+    "expected_mapping_outcome": "mapping_candidate_carried",
+    "expected_mapping_candidate_kind": "challenge_candidate",
+    "expected_recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE"
+  },
+  {
+    "sample_id": "gateway-mapping-candidate-carried",
+    "runtime_visible_sample_id": "gateway-visible-signal-carried",
+    "expected_mapping_outcome": "mapping_candidate_carried",
+    "expected_mapping_candidate_kind": "gateway_candidate",
+    "expected_recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY"
+  },
+  {
+    "sample_id": "no-visible-mapping-candidate",
+    "runtime_visible_sample_id": "no-visible-signal",
+    "expected_mapping_outcome": "no_mapping_candidate",
+    "expected_mapping_candidate_kind": "none",
+    "expected_recommended_error_code": null
+  },
+  {
+    "sample_id": "noop-visible-no-mapping-candidate",
+    "runtime_visible_sample_id": "noop-visible-signal",
+    "expected_mapping_outcome": "no_mapping_candidate",
+    "expected_mapping_candidate_kind": "none",
+    "expected_recommended_error_code": null
+  }
+]

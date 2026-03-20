@@ -22,6 +22,12 @@ from app.services.online.detector_live_entry_skeleton import (
     observe_live_entry_from_fetch_error,
     observe_live_entry_from_success_response,
 )
+from app.services.online.detector_runtime_visible_gating_skeleton import (
+    evaluate_detector_runtime_visible_gate_noop,
+)
+from app.services.online.detector_runtime_error_mapping_skeleton import (
+    evaluate_detector_runtime_error_mapping_noop,
+)
 from app.services.online.fetch_service import FetchServiceError, fetch_stage_response
 from app.services.online.online_sources import get_online_source
 from app.services.online.parser_engine import ParserEngineError
@@ -262,7 +268,9 @@ def _observe_live_entry_success_noop(*, stage: str, expected_response_type: str,
             expected_response_type=expected_response_type,
             raw_response=raw_response,
         )
-        _ = evaluate_detector_behavior_gate_noop(adapter_output)
+        gate_result = evaluate_detector_behavior_gate_noop(adapter_output)
+        visible_gate_result = evaluate_detector_runtime_visible_gate_noop(gate_result)
+        _ = evaluate_detector_runtime_error_mapping_noop(visible_gate_result)
     except Exception:
         # The live-entry skeleton is internal observation only. Any failure in
         # this branch must not change the existing fetch -> parser behavior.
@@ -283,10 +291,13 @@ def _observe_live_entry_error_noop(
             requested_url=requested_url,
             error=error,
         )
-        _ = evaluate_detector_behavior_gate_noop(adapter_output)
+        gate_result = evaluate_detector_behavior_gate_noop(adapter_output)
+        visible_gate_result = evaluate_detector_runtime_visible_gate_noop(gate_result)
+        _ = evaluate_detector_runtime_error_mapping_noop(visible_gate_result)
     except Exception:
-        # The live-entry skeleton is internal observation only. Any failure in
-        # this branch must not change the existing error surface.
+        # The live-entry / gating / mapping skeletons are internal observation
+        # only. Any failure in this branch must not change the existing error
+        # surface.
         return
 
 

@@ -136,6 +136,14 @@
 | minimal visible layer decision | 3-B.17 | decision-fixed | not implemented | 文档已固定为 future higher-layer `internal decision boundary` 上限 | 未暴露 | future runtime-visible gate boundary contract | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | higher-layer carrying 测试规划 |
 | detector 错误码 runtime-visible 升级门槛 | 3-B.17 | decision-fixed | not implemented | challenge/gateway 继续保持 `adapter_modeled` | 未暴露 | future runtime-visible gate -> runtime surface gate | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | no-upgrade / no-surface-change 测试规划 |
 | 下一轮最小 detector 任务占位 | 3-B.17 | decision-fixed | not implemented | 推荐转 3-B.18 detector runtime-visible minimal gating skeleton 实现 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| visible gate input contract | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_runtime_visible_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| visible gate result / signal / noop decision contract | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_runtime_visible_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| minimal runtime-visible gating helper | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_runtime_visible_gating_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| source_engine 更高层 visible gating 调用点 | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| higher-layer internal carrying | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| runtime-visible gating fixtures | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_runtime_visible_gating_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| no-behavior-change / no-surface-change tests | 3-B.18 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| 下一轮最小 detector 任务占位 | 3-B.18 | decision-fixed | not implemented | 推荐转 3-B.19 detector runtime error surface 决策轮 | 未暴露 | 待定 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
 | anti_bot_detector 分层 | 3-B.1 | decision-fixed | not implemented | 未正式支持 | 未暴露 | `anti_bot_detector` | `LEGADO_PHASE3B_DECISIONS.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | gateway / challenge / suspicious HTML 规划测试 |
 | 第一批 3-B 错误码选择 | 3-B.2 | implemented | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_runtime.py`, `backend/app/services/online/request_profile_service.py` | `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_request_preflight.py` |
 | 复杂请求 / 基础反爬 | 3-B | 已设计 | 未实现 | 未正式支持 | 未暴露 | `anti_bot_handler` 预留 | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | 未实现 |
@@ -162,6 +170,23 @@
 | L3-D.9 | detector live behavior gating decision | decision-fixed / not implemented | future gate-layer internal signal / no-op decision | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | gating boundary / no-surface-change 测试规划 |
 | L3-D.10 | detector live behavior minimal gating skeleton | implemented (internal only) | `backend/app/schemas/online_detector_gate.py`, `backend/app/services/online/detector_gating_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_gating_skeleton.py` |
 | L3-D.11 | detector runtime-visible gating decision | decision-fixed / not implemented | future higher-layer internal boundary near runtime surface | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | runtime-visible boundary / no-surface-change 测试规划 |
+| L3-D.12 | detector runtime-visible minimal gating skeleton | implemented (internal only) | `backend/app/schemas/online_detector_runtime_visible_gate.py`, `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` |
+| L3-D.13 | detector runtime error surface definition | decision-fixed / not implemented | strict runtime-facing surface terminology only; internal carried/visible results excluded | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | runtime-surface boundary / no-surface-change 测试规划 |
+| L3-D.14 | detector minimal approach layer decision | decision-fixed / not implemented | future internal-only runtime error mapping boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | internal mapping boundary / no-public-change 测试规划 |
+| L3-D.15 | detector runtime-facing mapping candidate gate | decision-fixed / not implemented | first-batch limited to challenge/gateway; suspicious HTML/browser/js excluded | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | candidate gate / no-upgrade 测试规划 |
+| L3-D.16 | 下一轮最小 detector 任务占位 | decision-fixed | not implemented | 推荐转 3-B.20 detector runtime error surface minimal skeleton 实现 | 未暴露 | future internal mapping contract + no-op helper | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| L3-D.17 | runtime error mapping input contract | implemented (internal only) | `backend/app/schemas/online_detector_runtime_error_mapping.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.18 | runtime error mapping result / candidate / noop decision contract | implemented (internal only) | `backend/app/schemas/online_detector_runtime_error_mapping.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.19 | minimal runtime error mapping helper | implemented (internal only) | `backend/app/services/online/detector_runtime_error_mapping_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.20 | source_engine runtime error mapping 邻接调用点 | implemented (internal only) | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.21 | higher-layer internal mapping candidate carrying | implemented (internal only) | `backend/app/services/online/detector_runtime_error_mapping_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.22 | runtime error mapping fixtures | implemented (internal only) | `backend/tests/fixtures/online_detector_runtime_error_mapping_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.23 | no-behavior-change / no-exception-surface-change tests | implemented (internal only) | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` |
+| L3-D.24 | 下一轮最小 detector 任务占位 | decision-fixed | not implemented | 推荐转 3-B.21 detector runtime-facing error gate 决策轮 | 未暴露 | future runtime-facing gate boundary | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| L3-D.25 | runtime-facing error gate definition | decision-fixed / not implemented | strict final internal gate before public exception/API surface | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | runtime-facing gate boundary / no-surface-change 测试规划 |
+| L3-D.26 | detector minimal approach layer decision | decision-fixed / not implemented | future internal-only runtime-facing gate boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | internal gate boundary / no-public-change 测试规划 |
+| L3-D.27 | detector runtime-facing gate discussion candidate gate | decision-fixed / not implemented | first-batch limited to challenge/gateway; suspicious HTML/browser/js excluded | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | candidate gate / no-upgrade 测试规划 |
+| L3-D.28 | 下一轮最小 detector 任务占位 | decision-fixed | not implemented | 推荐转 3-B.22 detector runtime-facing error gate minimal skeleton 实现 | 未暴露 | future internal gate contract + no-op helper | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
 | L4 | JS 依赖能力 | deferred to 3-C | `js_execution_sandbox` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 | L5 | 浏览器态 / WebView | deferred to 3-D | `browser_fallback_service` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 
@@ -550,3 +575,107 @@
 6. 本轮仍然只修改文档，不触碰任何 runtime 路径
 7. 下一轮最小任务已明确收敛为：
    - `Phase 3-B.18` detector runtime-visible minimal gating skeleton 实现
+
+当前 3-B.18 detector runtime-visible minimal gating skeleton 实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector_runtime_visible_gate.py` 已存在
+2. `backend/app/services/online/detector_runtime_visible_gating_skeleton.py` 已存在
+3. `backend/app/services/online/source_engine.py` 已存在更高层 visible gating 调用点
+4. `backend/tests/fixtures/online_detector_runtime_visible_gating_samples.json` 已存在
+5. `backend/tests/test_online_detector_runtime_visible_gating_skeleton.py` 已覆盖：
+   - visible gate contract
+   - candidate / no-match / noop cases
+   - higher-layer internal carrying
+   - no-behavior-change
+   - no-surface-change
+   - boundary isolation
+6. visible gate result 当前仍然只停留在 internal-only 层
+7. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+8. detector 候选错误码状态没有升级为 `runtime-implemented`
+9. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.19` detector runtime error surface 决策轮
+
+当前 3-B.19 detector runtime error surface 决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `backend/app/services/online/source_engine.py`
+   - `backend/app/services/online/fetch_service.py`
+   - `backend/app/services/online/response_guard_service.py`
+   - `backend/app/services/online/detector_live_entry_skeleton.py`
+   - `backend/app/services/online/detector_gating_skeleton.py`
+   - `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`
+2. 当前 detector result 已能到达的最高层级已固定为：
+   - `DetectorRuntimeVisibleGateResult.runtime_visible_signal`
+   - 但仍停留在 internal-only carrying
+3. `runtime error surface` 已被文档固定为：
+   - public exception
+   - public API error body / response shape
+   - 或已实际改变控制流的 runtime-facing error category
+4. 以下内容已被明确排除在 runtime error surface 之外：
+   - helper 局部变量
+   - internal carried signal
+   - internal visible gate result
+   - fixtures 中的 recommended error code
+5. future 最小 approach layer 已固定为：
+   - internal-only runtime error mapping boundary
+   - 而不是 public exception / public API surface
+6. 允许进入 future runtime-facing mapping discussion 的 detector candidate 已固定为：
+   - challenge
+   - gateway
+7. suspicious HTML / browser-required / js-required 当前继续排除在该讨论之外
+8. `LEGADO_ANTI_BOT_CHALLENGE` / `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 当前继续保持：
+   - `adapter_modeled`
+9. 本轮仍然只修改文档，不触碰任何 runtime 路径
+10. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.20` detector runtime error surface minimal skeleton 实现
+
+当前 3-B.20 detector runtime error surface minimal skeleton 实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector_runtime_error_mapping.py` 已存在
+2. `backend/app/services/online/detector_runtime_error_mapping_skeleton.py` 已存在
+3. `backend/app/services/online/source_engine.py` 已存在更高层 runtime error mapping 调用点
+4. `backend/tests/fixtures/online_detector_runtime_error_mapping_samples.json` 已存在
+5. `backend/tests/test_online_detector_runtime_error_mapping_skeleton.py` 已覆盖：
+   - mapping contract
+   - challenge / gateway / no-candidate / noop cases
+   - higher-layer internal mapping carrying
+   - no-behavior-change
+   - no-exception-surface-change
+   - boundary isolation
+6. mapping result 当前仍然只停留在 internal-only 层
+7. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+8. detector 候选错误码状态没有升级为 `runtime-implemented`
+9. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.21` detector runtime-facing error gate 决策轮
+
+当前 3-B.21 detector runtime-facing error gate 决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `backend/app/services/online/source_engine.py`
+   - `backend/app/services/online/fetch_service.py`
+   - `backend/app/services/online/response_guard_service.py`
+   - `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`
+   - `backend/app/services/online/detector_runtime_error_mapping_skeleton.py`
+2. 当前 detector result 已能到达的最高层级已固定为：
+   - `DetectorRuntimeErrorMappingResult.mapping_candidate`
+   - 但仍停留在 internal-only carrying
+3. `runtime-facing error gate` 已被文档固定为：
+   - public exception / public API error surface 之前的最后一个 internal gate
+4. 以下内容已被明确排除在 runtime-facing error gate 之外：
+   - helper 局部变量
+   - internal carried signal
+   - visible gate result
+   - mapping candidate
+   - fixtures 中的 recommended error code
+5. future 最小 approach layer 已固定为：
+   - internal-only runtime-facing gate boundary
+   - 而不是 public exception / public API surface
+6. 允许进入 future runtime-facing gate discussion 的 detector candidate 已固定为：
+   - challenge
+   - gateway
+7. suspicious HTML / browser-required / js-required 当前继续排除在该讨论之外
+8. `LEGADO_ANTI_BOT_CHALLENGE` / `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 当前继续保持：
+   - `adapter_modeled`
+9. 本轮仍然只修改文档，不触碰任何 runtime 路径
+10. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.22` detector runtime-facing error gate minimal skeleton 实现
