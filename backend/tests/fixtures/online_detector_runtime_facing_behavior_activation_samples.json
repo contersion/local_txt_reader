@@ -1,0 +1,30 @@
+[
+  {
+    "sample_id": "challenge-activation-candidate-carried",
+    "runtime_facing_behavior_gate_sample_id": "challenge-behavior-gate-candidate-carried",
+    "expected_activation_outcome": "activation_candidate_carried",
+    "expected_activation_candidate_kind": "challenge_candidate",
+    "expected_recommended_error_code": "LEGADO_ANTI_BOT_CHALLENGE"
+  },
+  {
+    "sample_id": "gateway-activation-candidate-carried",
+    "runtime_facing_behavior_gate_sample_id": "gateway-behavior-gate-candidate-carried",
+    "expected_activation_outcome": "activation_candidate_carried",
+    "expected_activation_candidate_kind": "gateway_candidate",
+    "expected_recommended_error_code": "LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY"
+  },
+  {
+    "sample_id": "no-activation-candidate",
+    "runtime_facing_behavior_gate_sample_id": "no-behavior-gate-candidate",
+    "expected_activation_outcome": "no_activation_candidate",
+    "expected_activation_candidate_kind": "none",
+    "expected_recommended_error_code": null
+  },
+  {
+    "sample_id": "noop-activation-candidate",
+    "runtime_facing_behavior_gate_sample_id": "noop-behavior-gate-candidate",
+    "expected_activation_outcome": "no_activation_candidate",
+    "expected_activation_candidate_kind": "none",
+    "expected_recommended_error_code": null
+  }
+]

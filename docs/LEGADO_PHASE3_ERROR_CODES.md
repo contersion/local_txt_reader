@@ -1544,6 +1544,559 @@ challenge/gateway 仍然 **不应仅因这些结构存在** 就升级为：
 
 - `adapter_modeled`
 
+## 4.22 3-B.22 runtime-facing error gate minimal skeleton 实装后的错误码状态结论
+
+本轮进入代码的是：
+
+- internal runtime-facing gate input contract
+- internal runtime-facing gate candidate / result / noop decision contract
+- minimal runtime-facing gate helper
+- source-engine 邻接更高层的 internal gate carrying
+
+本轮**不是**：
+
+- runtime-facing error gate 生效
+- detector 错误码对外抛出
+- public exception change
+- public API error body change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.22.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 本轮虽然让 detector result 进入了更高层 internal gate boundary
+- 也虽然允许 internal gate candidate / no-op gate decision 存在
+- 但 detector 结果仍然没有进入 runtime-facing error gate 生效
+- 更没有进入 public exception / API surface
+
+### 4.22.2 internal gate candidate 不是新的错误码生命周期状态
+
+本轮允许存在：
+
+- higher-layer internal gate candidate carrying
+- internal gate decision noop
+
+但它们只应被理解为：
+
+- runtime-facing error gate boundary 的 internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_gate_candidate`
+- `runtime-facing_candidate`
+- `external_gate_ready`
+- 其他新的错误码 lifecycle 状态
+
+### 4.22.3 future runtime-facing behavior gate 前仍需满足的条件
+
+即使 3-B.22 已完成 minimal runtime-facing error gate skeleton，challenge/gateway future 若要靠近 runtime-facing behavior gate，仍至少需要满足：
+
+1. 哪类 internal gate candidate 允许 first approach runtime-facing behavior gate 已被单独决策
+2. runtime-facing behavior gate 与 public exception / API / parser / response_guard 的关系已冻结
+3. public behavior 变化已被单独评估并可稳定复现
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+## 4.23 3-B.23 runtime-facing behavior gate 决策后的错误码状态结论
+
+本轮只固定：
+
+- `runtime-facing behavior gate` 的严格定义
+- detector result future 最多只允许 first approach 的 internal runtime-facing behavior gate boundary
+- 哪些 detector candidate 可以进入 future runtime-facing behavior gate discussion
+- detector 候选错误码进入 future runtime-facing behavior gate discussion 前仍需满足的门槛
+
+本轮**不是**：
+
+- runtime-facing behavior gate 代码
+- detector 错误码对外抛出
+- public exception change
+- public API error body / shape change
+- public control-flow change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.23.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 3-B.22 当前最多只证明了 higher-layer internal gate candidate carrying
+- 3-B.23 当前只冻结了 runtime-facing behavior gate boundary
+- 当前既没有 runtime-facing behavior gate 代码
+- 也没有 public behavior / API / exception / control-flow change
+
+### 4.23.2 runtime-facing behavior gate 决策本身不构成错误码升级条件
+
+3-B.23 明确固定：
+
+- `runtime-facing behavior gate` 只指真正位于 public exception、public API error、public control-flow change 之前的最后一个 internal gate
+
+因此以下内容都 **不应** 被理解为：
+
+- `runtime-implemented`
+
+包括但不限于：
+
+- internal carried signal
+- `DetectorRuntimeVisibleGateResult`
+- `DetectorRuntimeErrorMappingResult`
+- `DetectorRuntimeFacingGateResult`
+- internal runtime-facing behavior gate candidate
+- fixtures / samples 中的 recommended error code
+
+### 4.23.3 internal behavior-gate boundary 不是新的错误码生命周期状态
+
+本轮允许讨论存在：
+
+- higher-layer internal behavior-gate candidate carrying
+- internal behavior-gate decision noop
+
+但它们只应被理解为：
+
+- runtime-facing behavior gate boundary 的 internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_behavior_candidate`
+- `behavior_gate_ready`
+- `external_behavior_ready`
+- 其他新的错误码 lifecycle 状态
+
+### 4.23.4 future runtime-facing behavior gate discussion 前仍需满足的条件
+
+即使 3-B.23 已完成 runtime-facing behavior gate 决策，challenge/gateway future 若要进入 runtime-facing behavior gate skeleton 讨论，仍至少需要满足：
+
+1. higher-layer carrying 已稳定存在，且 no-op 语义清晰
+2. internal mapping candidate 已稳定存在
+3. internal runtime-facing error gate candidate 已稳定存在
+4. 正样本、负样本与 no-regression 证据继续存在
+5. challenge/gateway 误判风险已有进一步收敛证据
+6. future internal runtime-facing behavior gate contract 的 owner、输入、输出与职责边界已冻结
+7. 文档与测试都能明确证明：
+   - internal behavior-gate boundary 不是 public exception
+   - internal behavior-gate boundary 不是 API error body / shape
+   - internal behavior-gate boundary 不是 parser / response_guard owner
+   - internal behavior-gate boundary 不是 control-flow owner
+8. challenge/gateway 仍未对外抛出，public behavior 仍未发生变化
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+### 4.23.5 下一轮若进入 minimal skeleton，也不等于错误码升级
+
+即使下一轮进入 future minimal runtime-facing behavior gate skeleton，并实现了：
+
+- internal-only runtime-facing behavior gate input / result contract
+- runtime-facing error gate candidate -> runtime-facing behavior gate candidate 的 no-op helper
+- `source_engine.py` 邻接的 internal behavior-gate 调用点
+
+challenge/gateway 也 **不应仅因这些结构存在** 就升级为：
+
+- `runtime-implemented`
+
+除非后续又单独证明：
+
+- public behavior owner 已冻结
+- behavior-gate 与 API / exception / parser / response_guard / control-flow 的隔离已稳定成立
+- live runtime 与 no-regression 证据已存在
+- 文档、Traceability、测试与错误码状态继续明确：
+  - classification only
+  - not bypass
+  - not browser/js runtime support
+
+## 4.24 3-B.24 runtime-facing behavior gate minimal skeleton 实装后的错误码状态结论
+
+本轮进入代码的是：
+
+- internal runtime-facing behavior gate input contract
+- internal runtime-facing behavior gate candidate / result / noop decision contract
+- minimal runtime-facing behavior gate helper
+- source-engine 邻接更高层的 internal behavior gate carrying
+
+本轮**不是**：
+
+- runtime-facing behavior gate 生效
+- detector 错误码对外抛出
+- public exception change
+- public API error body / response shape change
+- public control-flow change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.24.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 本轮虽然让 detector result 进入了更高层 internal behavior gate boundary
+- 也虽然允许 internal behavior gate candidate / no-op behavior gate decision 存在
+- 但 detector 结果仍然没有进入 runtime-facing behavior gate 生效
+- 更没有进入 public exception / API / control-flow surface
+
+### 4.24.2 internal behavior gate candidate 不是新的错误码生命周期状态
+
+本轮允许存在：
+
+- higher-layer internal behavior gate candidate carrying
+- internal behavior gate decision noop
+
+但它们只应被理解为：
+
+- runtime-facing behavior gate boundary 的 internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_behavior_candidate`
+- `behavior_gate_ready`
+- `external_behavior_ready`
+- 其他新的错误码 lifecycle 状态
+
+### 4.24.3 future runtime-facing behavior activation 前仍需满足的条件
+
+即使 3-B.24 已完成 minimal runtime-facing behavior gate skeleton，challenge/gateway future 若要靠近 runtime-facing behavior activation，仍至少需要满足：
+
+1. 哪类 internal behavior gate candidate 允许进入真正的 activation discussion 已被单独决策
+2. runtime-facing behavior gate 与 public exception / API / parser / response_guard / control-flow 的关系已冻结
+3. public behavior 变化已被单独评估并可稳定复现
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+### 4.24.4 下一轮若进入 activation 讨论，也不等于错误码升级
+
+即使下一轮进入 future runtime-facing behavior activation 决策轮：
+
+- challenge/gateway 也 **不应仅因本轮内部 behavior gate skeleton 已存在** 就升级为：
+  - `runtime-implemented`
+
+除非后续又单独证明：
+
+- public behavior owner 已冻结
+- behavior activation 与 API / exception / parser / response_guard / control-flow 的隔离已稳定成立
+- live runtime 与 no-regression 证据已存在
+- 文档、Traceability、测试与错误码状态继续明确：
+  - classification only
+  - not bypass
+  - not browser/js runtime support
+
+## 4.25 3-B.25 runtime-facing behavior activation 决策后的错误码状态结论
+
+本轮只固定：
+
+- `runtime-facing behavior activation` 的严格定义
+- detector result future 最多只允许 first approach 的 internal runtime-facing behavior activation boundary
+- 哪些 detector candidate 可以进入 future runtime-facing behavior activation discussion
+- detector 候选错误码进入 future runtime-facing behavior activation discussion 前仍需满足的门槛
+
+本轮**不是**：
+
+- runtime-facing behavior activation 代码
+- detector 错误码对外抛出
+- public exception change
+- public API error body / shape change
+- public control-flow change
+- public fallback dispatch change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.25.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 3-B.24 当前最多只证明了 higher-layer internal behavior gate candidate carrying
+- 3-B.25 当前只冻结了 runtime-facing behavior activation boundary
+- 当前既没有 runtime-facing behavior activation 代码
+- 也没有 public behavior / API / exception / control-flow / fallback-dispatch change
+
+### 4.25.2 runtime-facing behavior activation 决策本身不构成错误码升级条件
+
+3-B.25 明确固定：
+
+- `runtime-facing behavior activation` 只指真正位于 public exception、public API error、public control-flow、public fallback dispatch 之前的最后一个 internal activation gate
+
+因此以下内容都 **不应** 被理解为：
+
+- `runtime-implemented`
+
+包括但不限于：
+
+- internal carried signal
+- `DetectorRuntimeVisibleGateResult`
+- `DetectorRuntimeErrorMappingResult`
+- `DetectorRuntimeFacingGateResult`
+- `DetectorRuntimeFacingBehaviorGateResult`
+- internal runtime-facing behavior activation candidate
+- fixtures / samples 中的 recommended error code
+
+### 4.25.3 internal activation boundary 不是新的错误码生命周期状态
+
+本轮允许讨论存在：
+
+- higher-layer internal activation candidate carrying
+- internal activation decision noop
+
+但它们只应被理解为：
+
+- runtime-facing behavior activation boundary 的 internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_activation_candidate`
+- `activation_ready`
+- `external_activation_ready`
+- 其他新的错误码 lifecycle 状态
+
+### 4.25.4 future runtime-facing behavior activation discussion 前仍需满足的条件
+
+即使 3-B.25 已完成 runtime-facing behavior activation 决策，challenge/gateway future 若要进入 runtime-facing behavior activation skeleton 讨论，仍至少需要满足：
+
+1. higher-layer carrying 已稳定存在，且 no-op 语义清晰
+2. internal mapping candidate 已稳定存在
+3. internal runtime-facing error gate candidate 已稳定存在
+4. internal runtime-facing behavior gate candidate 已稳定存在
+5. 正样本、负样本与 no-regression 证据继续存在
+6. challenge/gateway 误判风险已有进一步收敛证据
+7. future internal runtime-facing behavior activation contract 的 owner、输入、输出与职责边界已冻结
+8. 文档与测试都能明确证明：
+   - internal activation boundary 不是 public exception
+   - internal activation boundary 不是 API error body / shape
+   - internal activation boundary 不是 parser / response_guard owner
+   - internal activation boundary 不是 control-flow owner
+   - internal activation boundary 不是 fallback dispatch owner
+9. challenge/gateway 仍未对外抛出，public behavior 仍未发生变化
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+### 4.25.5 下一轮若进入 minimal activation skeleton，也不等于错误码升级
+
+即使下一轮进入 future minimal runtime-facing behavior activation skeleton，并实现了：
+
+- internal-only runtime-facing behavior activation input / result contract
+- runtime-facing behavior gate candidate -> runtime-facing behavior activation candidate 的 no-op helper
+- `source_engine.py` 邻接的 internal activation 调用点
+
+challenge/gateway 也 **不应仅因这些结构存在** 就升级为：
+
+- `runtime-implemented`
+
+除非后续又单独证明：
+
+- public behavior owner 已冻结
+- activation 与 API / exception / parser / response_guard / control-flow / fallback dispatch 的隔离已稳定成立
+- live runtime 与 no-regression 证据已存在
+- 文档、Traceability、测试与错误码状态继续明确：
+  - classification only
+  - not bypass
+  - not browser/js runtime support
+
+## 4.26 3-B.26 runtime-facing behavior activation minimal skeleton 实装后的错误码状态结论
+
+本轮进入代码的是：
+
+- internal runtime-facing behavior activation input contract
+- internal runtime-facing behavior activation candidate / result / noop decision contract
+- minimal runtime-facing behavior activation helper
+- source-engine 邻接更高层的 internal activation carrying
+
+本轮**不是**：
+
+- runtime-facing behavior activation 生效
+- detector 错误码对外抛出
+- public exception change
+- public API error body / response shape change
+- public control-flow change
+- public fallback dispatch change
+
+因此本轮不会让任何 detector 候选错误码升级为：
+
+- `runtime-implemented`
+
+### 4.26.1 challenge / gateway 当前状态继续保持 `adapter_modeled`
+
+以下错误码继续保持：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+当前状态都仍然是：
+
+- `adapter_modeled`
+
+原因是：
+
+- 本轮虽然让 detector result 进入了更高层 internal activation boundary
+- 也虽然允许 internal activation candidate / no-op activation decision 存在
+- 但 detector 结果仍然没有进入 runtime-facing behavior activation 生效
+- 更没有进入 public exception / API / control-flow / fallback-dispatch surface
+
+### 4.26.2 internal activation candidate 不是新的错误码生命周期状态
+
+本轮允许存在：
+
+- higher-layer internal activation candidate carrying
+- internal activation decision noop
+
+但它们只应被理解为：
+
+- runtime-facing behavior activation boundary 的 internal contract 语义
+
+它们**不应**被理解为：
+
+- 新的错误码生命周期状态
+- 更不应被理解为：
+  - `runtime-implemented`
+
+因此本轮继续不新增：
+
+- `internal_activation_candidate`
+- `activation_ready`
+- `external_activation_ready`
+- 其他新的错误码 lifecycle 状态
+
+### 4.26.3 future runtime-facing behavior effect 前仍需满足的条件
+
+即使 3-B.26 已完成 minimal runtime-facing behavior activation skeleton，challenge/gateway future 若要靠近 runtime-facing behavior effect，仍至少需要满足：
+
+1. 哪类 internal activation candidate 允许进入真正的 effect discussion 已被单独决策
+2. runtime-facing behavior activation 与 public exception / API / parser / response_guard / control-flow / fallback dispatch 的关系已冻结
+3. public behavior 变化已被单独评估并可稳定复现
+4. 正样本、负样本与 no-regression 证据存在
+5. 文档、Traceability、测试继续明确：
+   - classification only
+   - not bypass
+   - not browser/js runtime support
+
+在这些条件满足之前：
+
+- `LEGADO_ANTI_BOT_CHALLENGE`
+- `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY`
+
+都必须继续保持：
+
+- `adapter_modeled`
+
+### 4.26.4 下一轮若进入 effect 决策，也不等于错误码升级
+
+即使下一轮进入 future runtime-facing behavior effect 决策轮：
+
+- challenge/gateway 也 **不应仅因本轮内部 activation skeleton 已存在** 就升级为：
+  - `runtime-implemented`
+
+除非后续又单独证明：
+
+- public behavior owner 已冻结
+- effect 与 API / exception / parser / response_guard / control-flow / fallback dispatch 的隔离已稳定成立
+- live runtime 与 no-regression 证据已存在
+- 文档、Traceability、测试与错误码状态继续明确：
+  - classification only
+  - not bypass
+  - not browser/js runtime support
+
 ## 7. 编码约定
 
 Phase 3 错误码遵循以下约定：

@@ -187,6 +187,14 @@
 | L3-D.26 | detector minimal approach layer decision | decision-fixed / not implemented | future internal-only runtime-facing gate boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | internal gate boundary / no-public-change 测试规划 |
 | L3-D.27 | detector runtime-facing gate discussion candidate gate | decision-fixed / not implemented | first-batch limited to challenge/gateway; suspicious HTML/browser/js excluded | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | candidate gate / no-upgrade 测试规划 |
 | L3-D.28 | 下一轮最小 detector 任务占位 | decision-fixed | not implemented | 推荐转 3-B.22 detector runtime-facing error gate minimal skeleton 实现 | 未暴露 | future internal gate contract + no-op helper | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+| L3-D.29 | runtime-facing gate input contract | implemented (internal only) | `backend/app/schemas/online_detector_runtime_facing_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.30 | runtime-facing gate result / candidate / noop decision contract | implemented (internal only) | `backend/app/schemas/online_detector_runtime_facing_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.31 | minimal runtime-facing gate helper | implemented (internal only) | `backend/app/services/online/detector_runtime_facing_gate_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.32 | source_engine runtime-facing gate 邻接调用点 | implemented (internal only) | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.33 | higher-layer internal gate candidate carrying | implemented (internal only) | `backend/app/services/online/detector_runtime_facing_gate_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.34 | runtime-facing gate fixtures | implemented (internal only) | `backend/tests/fixtures/online_detector_runtime_facing_gate_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.35 | no-behavior-change / no-exception-surface-change tests | implemented (internal only) | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` |
+| L3-D.36 | 下一轮最小 detector 任务占位 | decision-fixed | not implemented | 推荐转 3-B.23 detector runtime-facing behavior gate 决策轮 | 未暴露 | future runtime-facing behavior gate boundary | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
 | L4 | JS 依赖能力 | deferred to 3-C | `js_execution_sandbox` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 | L5 | 浏览器态 / WebView | deferred to 3-D | `browser_fallback_service` | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md` | deferred |
 
@@ -679,3 +687,169 @@
 9. 本轮仍然只修改文档，不触碰任何 runtime 路径
 10. 下一轮最小任务已明确收敛为：
    - `Phase 3-B.22` detector runtime-facing error gate minimal skeleton 实现
+
+当前 3-B.22 detector runtime-facing error gate minimal skeleton 实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector_runtime_facing_gate.py` 已存在
+2. `backend/app/services/online/detector_runtime_facing_gate_skeleton.py` 已存在
+3. `backend/app/services/online/source_engine.py` 已存在更高层 runtime-facing gate 调用点
+4. `backend/tests/fixtures/online_detector_runtime_facing_gate_samples.json` 已存在
+5. `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py` 已覆盖：
+   - gate contract
+   - challenge / gateway / no-candidate / noop cases
+   - higher-layer internal gate carrying
+   - no-behavior-change
+   - no-exception-surface-change
+   - boundary isolation
+6. gate result 当前仍然只停留在 internal-only 层
+7. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+8. detector 候选错误码状态没有升级为 `runtime-implemented`
+9. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.23` detector runtime-facing behavior gate 决策轮
+
+## 3-B.23 runtime-facing behavior gate Traceability 补充
+
+| 能力 | 当前阶段 | 实现状态 | 验证状态 | 支持状态 | API 暴露状态 | 后端模块 | 文档 | 测试 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| runtime-facing behavior gate definition | 3-B.23 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future internal-only runtime-facing behavior gate boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | behavior-gate boundary / no-public-change 测试规划 |
+| detector minimal approach layer to behavior gate | 3-B.23 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future internal-only runtime-facing behavior gate boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | internal boundary / no-behavior-change 测试规划 |
+| runtime-facing behavior gate discussion candidate gate | 3-B.23 | decision-fixed | not implemented | first-batch 仅 challenge/gateway | 未暴露 | future runtime-facing behavior gate skeleton | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | candidate gate / exclusion regression 测试规划 |
+| detector error-code threshold for behavior-gate discussion | 3-B.23 | decision-fixed | not implemented | challenge/gateway 继续保持 `adapter_modeled` | 未暴露 | `LEGADO_ANTI_BOT_CHALLENGE`, `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` lifecycle gate | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | sample threshold / no-upgrade 测试规划 |
+| 下一轮最小 detector 任务占位 | 3-B.23 | decision-fixed | not implemented | 推荐转 3-B.24 runtime-facing behavior gate minimal skeleton 实现 | 未暴露 | future internal contract + no-op helper | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+
+当前 3-B.23 detector runtime-facing behavior gate 决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `backend/app/services/online/source_engine.py`
+   - `backend/app/services/online/fetch_service.py`
+   - `backend/app/services/online/response_guard_service.py`
+   - `backend/app/services/online/detector_gating_skeleton.py`
+   - `backend/app/services/online/detector_runtime_visible_gating_skeleton.py`
+   - `backend/app/services/online/detector_runtime_error_mapping_skeleton.py`
+   - `backend/app/services/online/detector_runtime_facing_gate_skeleton.py`
+2. 当前 detector result 已能到达的最高层级已固定为：
+   - `DetectorRuntimeFacingGateResult.gate_candidate`
+   - `DetectorRuntimeFacingGateResult.gate_decision`
+   - 但仍停留在 internal-only carrying
+3. `runtime-facing behavior gate` 已被文档固定为：
+   - public exception / public API error / public control-flow change 之前的最后一个 internal gate
+4. 以下内容已被明确排除在 runtime-facing behavior gate 之外：
+   - helper 局部变量
+   - internal carried signal
+   - visible gate result
+   - mapping candidate
+   - runtime-facing error gate result
+   - fixtures 中的 recommended error code
+5. future 最小 approach layer 已固定为：
+   - internal-only runtime-facing behavior gate boundary
+   - 而不是 public exception / public API / public behavior surface
+6. 允许进入 future runtime-facing behavior gate discussion 的 detector candidate 已固定为：
+   - challenge
+   - gateway
+7. suspicious HTML / browser-required / js-required 当前继续排除在该讨论之外
+8. `LEGADO_ANTI_BOT_CHALLENGE` / `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 当前继续保持：
+   - `adapter_modeled`
+9. 本轮仍然只修改文档，不触碰任何 runtime 路径
+10. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.24` detector runtime-facing behavior gate minimal skeleton 实现
+
+| L3-D.37 | runtime-facing behavior gate input contract | implemented (internal only) | `backend/app/schemas/online_detector_runtime_facing_behavior_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.38 | runtime-facing behavior gate result / candidate / noop decision contract | implemented (internal only) | `backend/app/schemas/online_detector_runtime_facing_behavior_gate.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.39 | minimal runtime-facing behavior gate helper | implemented (internal only) | `backend/app/services/online/detector_runtime_facing_behavior_gate_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.40 | source_engine runtime-facing behavior gate 邻接调用点 | implemented (internal only) | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.41 | higher-layer internal behavior gate candidate carrying | implemented (internal only) | `backend/app/services/online/detector_runtime_facing_behavior_gate_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.42 | runtime-facing behavior gate fixtures | implemented (internal only) | `backend/tests/fixtures/online_detector_runtime_facing_behavior_gate_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.43 | no-behavior-change / no-control-flow-change tests | implemented (internal only) | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` |
+| L3-D.44 | 下一轮最小 detector 任务占位 | decision-fixed | not implemented | 推荐转 3-B.25 detector runtime-facing behavior activation 决策轮 | 未暴露 | future behavior activation boundary | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+
+当前 3-B.24 detector runtime-facing behavior gate minimal skeleton 实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector_runtime_facing_behavior_gate.py` 已存在
+2. `backend/app/services/online/detector_runtime_facing_behavior_gate_skeleton.py` 已存在
+3. `backend/app/services/online/source_engine.py` 已存在更高层 runtime-facing behavior gate 调用点
+4. `backend/tests/fixtures/online_detector_runtime_facing_behavior_gate_samples.json` 已存在
+5. `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py` 已覆盖：
+   - behavior gate contract
+   - challenge / gateway / no-candidate / noop cases
+   - higher-layer internal behavior gate carrying
+   - no-behavior-change
+   - no-exception-surface-change
+   - no-control-flow-change
+   - boundary isolation
+6. behavior gate result 当前仍然只停留在 internal-only 层
+7. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+8. detector 候选错误码状态没有升级为 `runtime-implemented`
+9. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.25` detector runtime-facing behavior activation 决策轮
+
+| L3-D.45 | runtime-facing behavior activation definition | 3-B.25 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future internal-only runtime-facing behavior activation boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | activation-boundary / no-public-change 测试规划 |
+| L3-D.46 | detector minimal approach layer to activation | 3-B.25 | decision-fixed | not implemented | 文档已固定 | 未暴露 | future internal-only runtime-facing behavior activation boundary | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | internal activation boundary / no-behavior-change 测试规划 |
+| L3-D.47 | runtime-facing behavior activation discussion candidate gate | 3-B.25 | decision-fixed | not implemented | first-batch 仅 challenge/gateway | 未暴露 | future runtime-facing behavior activation skeleton | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | activation candidate gate / exclusion regression 测试规划 |
+| L3-D.48 | detector error-code threshold for activation discussion | 3-B.25 | decision-fixed | not implemented | challenge/gateway 继续保持 `adapter_modeled` | 未暴露 | `LEGADO_ANTI_BOT_CHALLENGE`, `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` lifecycle gate | `LEGADO_PHASE3_ERROR_CODES.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | activation threshold / no-upgrade 测试规划 |
+| L3-D.49 | 下一轮最小 detector 任务占位 | 3-B.25 | decision-fixed | not implemented | 推荐转 3-B.26 runtime-facing behavior activation minimal skeleton 实现 | 未暴露 | future internal activation contract + no-op helper | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+
+当前 3-B.25 detector runtime-facing behavior activation 决策轮的最小验收链为：
+
+1. 已再次核查：
+   - `backend/app/services/online/source_engine.py`
+   - `backend/app/services/online/fetch_service.py`
+   - `backend/app/services/online/response_guard_service.py`
+   - `backend/app/services/online/detector_runtime_error_mapping_skeleton.py`
+   - `backend/app/services/online/detector_runtime_facing_gate_skeleton.py`
+   - `backend/app/services/online/detector_runtime_facing_behavior_gate_skeleton.py`
+2. 当前 detector result 已能到达的最高层级已固定为：
+   - `DetectorRuntimeFacingBehaviorGateResult.behavior_gate_candidate`
+   - `DetectorRuntimeFacingBehaviorGateResult.behavior_gate_decision`
+   - 但仍停留在 internal-only carrying
+3. `runtime-facing behavior activation` 已被文档固定为：
+   - public exception / public API error / public control-flow / public fallback dispatch 之前的最后一个 internal activation gate
+4. 以下内容已被明确排除在 runtime-facing behavior activation 之外：
+   - helper 局部变量
+   - internal carried signal
+   - visible gate result
+   - mapping candidate
+   - runtime-facing error gate result
+   - runtime-facing behavior gate result
+   - fixtures 中的 recommended error code
+5. future 最小 approach layer 已固定为：
+   - internal-only runtime-facing behavior activation boundary
+   - 而不是 public exception / public API / public behavior / public fallback surface
+6. 允许进入 future runtime-facing behavior activation discussion 的 detector candidate 已固定为：
+   - challenge
+   - gateway
+7. suspicious HTML / browser-required / js-required 当前继续排除在该讨论之外
+8. `LEGADO_ANTI_BOT_CHALLENGE` / `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 当前继续保持：
+   - `adapter_modeled`
+9. 本轮仍然只修改文档，不触碰任何 runtime 路径
+10. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.26` detector runtime-facing behavior activation minimal skeleton 实现
+
+| L3-D.50 | runtime-facing behavior activation input contract | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_runtime_facing_behavior_activation.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.51 | runtime-facing behavior activation result / candidate / noop decision contract | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/app/schemas/online_detector_runtime_facing_behavior_activation.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.52 | minimal runtime-facing behavior activation helper | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_runtime_facing_behavior_activation_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.53 | source_engine runtime-facing behavior activation 邻接调用点 | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.54 | higher-layer internal activation candidate carrying | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/app/services/online/detector_runtime_facing_behavior_activation_skeleton.py`, `backend/app/services/online/source_engine.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_ERROR_CODES.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.55 | runtime-facing behavior activation fixtures | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/fixtures/online_detector_runtime_facing_behavior_activation_samples.json` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.56 | no-behavior-change / no-fallback-dispatch-change tests | 3-B.26 | implemented (internal only) | 部分验证 | 未正式支持 | 未暴露 | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` | `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md` | `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` |
+| L3-D.57 | 下一轮最小 detector 任务占位 | 3-B.26 | decision-fixed | not implemented | 推荐转 3-B.27 runtime-facing behavior effect 决策轮 | 未暴露 | future internal effect boundary | `LEGADO_PHASE3_IMPLEMENTATION_PLAN.md`, `LEGADO_PHASE3B_REQUEST_RUNTIME.md`, `LEGADO_PHASE3_TRACEABILITY_INDEX.md` | 待下一轮 |
+
+当前 3-B.26 detector runtime-facing behavior activation minimal skeleton 实现的最小验收链为：
+
+1. `backend/app/schemas/online_detector_runtime_facing_behavior_activation.py` 已存在
+2. `backend/app/services/online/detector_runtime_facing_behavior_activation_skeleton.py` 已存在
+3. `backend/app/services/online/source_engine.py` 已存在更高层 runtime-facing behavior activation 调用点
+4. `backend/tests/fixtures/online_detector_runtime_facing_behavior_activation_samples.json` 已存在
+5. `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py` 已覆盖：
+   - activation contract
+   - challenge / gateway / no-candidate / noop cases
+   - higher-layer internal activation carrying
+   - no-behavior-change
+   - no-exception-surface-change
+   - no-control-flow-change
+   - no-fallback-dispatch-change
+   - boundary isolation
+6. activation result 当前仍然只停留在 internal-only 层
+7. `fetch_service.py` / `response_guard_service.py` / parser 行为没有被改变
+8. detector 候选错误码状态没有升级为 `runtime-implemented`
+9. 下一轮最小任务已明确收敛为：
+   - `Phase 3-B.27` detector runtime-facing behavior effect 决策轮

@@ -30,6 +30,11 @@
 - `Phase 3-B.19`
 - `Phase 3-B.20`
 - `Phase 3-B.21`
+- `Phase 3-B.22`
+- `Phase 3-B.23`
+- `Phase 3-B.24`
+- `Phase 3-B.25`
+- `Phase 3-B.26`
 
 ## 阶段拆分
 
@@ -1764,6 +1769,470 @@
 
 - detector live runtime
 - runtime-facing error change
+- detector 错误码对外抛出
+- challenge/gateway live support
+- browser/js fallback
+- anti-bot bypass
+
+### Phase 3-B.22：detector runtime-facing error gate minimal skeleton 实现
+#### 目标
+
+- 落地 internal-only runtime-facing gate input / result / candidate / noop decision contract
+- 落地 minimal runtime-facing gate helper
+- 落地 source-engine 邻接更高层的 no-op runtime-facing gate 调用点
+- 落地 higher-layer internal gate candidate carrying
+- 落地 no-behavior-change / no-exception-surface-change / no-api-surface-change tests
+
+#### 默认策略
+
+- 允许进入代码
+- 但只允许内部 gate schema / helper / source-engine 邻接调用 / fixtures / tests / docs
+- 默认不改 public behavior
+- 默认不进入 runtime-facing error gate 生效
+
+#### 已落地范围
+
+- `backend/app/schemas/online_detector_runtime_facing_gate.py`
+- `backend/app/services/online/detector_runtime_facing_gate_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_runtime_facing_gate_samples.json`
+- `backend/tests/test_online_detector_runtime_facing_gate_skeleton.py`
+
+#### 明确不做什么
+
+- 不改 `fetch_service.py`
+- 不改 `response_guard_service.py`
+- 不改 parser / content_parse 行为
+- 不改 public exception surface
+- 不改 public router / importer / DB / frontend
+- 不做 runtime-facing error gate 生效
+- 不做 challenge/gateway live support
+- 不做 browser/js fallback
+- 不做 anti-bot bypass
+
+#### 为什么这一步安全
+
+- gate helper 只消费 runtime error mapping result / detector result
+- gate result 只表达 higher-layer internal gate candidate 与 no-op decision
+- source-engine 中的 gate helper 调用结果被明确丢弃
+- source-engine 中的 gate helper 调用继续用 no-op guard 隔离
+
+#### 验收标准
+
+- gate input / candidate / result contract 可独立构建
+- challenge / gateway / no-candidate / noop cases 按预期处理
+- success / error path higher-layer gate carrying 可触发
+- 既有返回值、异常、parser、response_guard、API 行为不变
+- detector 错误码状态不升级为 `runtime-implemented`
+- 相关回归测试继续通过
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.22` 已完成 detector runtime-facing error gate minimal skeleton 实现，但仓库仍未进入 detector live runtime，仍未进入 runtime-facing error gate 生效，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.23：detector runtime-facing behavior gate 决策轮**
+
+范围必须继续收紧为：
+
+- 哪类 internal gate candidate future 有资格 first approach runtime-facing behavior gate
+- runtime-facing behavior gate 与 public exception / API / parser / response_guard 的真实接缝
+- public behavior change 前还缺哪些门槛
+
+当前仍不应直接进入：
+
+- detector live runtime
+- runtime-facing error gate 生效
+- detector 错误码对外抛出
+- challenge/gateway live support
+- browser/js fallback
+- anti-bot bypass
+
+### Phase 3-B.23：detector runtime-facing behavior gate 决策轮
+#### 目标
+
+- 冻结 `runtime-facing behavior gate` 的严格定义
+- 冻结 detector result future 最多只允许接近到哪一层 internal boundary
+- 冻结 first-batch 允许进入 future runtime-facing behavior gate discussion 的 detector candidate 范围
+- 冻结 challenge/gateway 候选错误码进入 future behavior-gate skeleton 讨论前仍需满足的门槛
+- 为下一轮最小 runtime-facing behavior gate skeleton 实现收敛到最小、可回退、no-op 的内部结构入口
+
+#### 默认策略
+
+- 默认只改文档、Traceability、错误码状态与测试规划
+- 默认不落代码
+- 默认不进入 runtime-facing behavior change
+- 默认不改变 `fetch_service.py`、`response_guard_service.py`、parser、API、exception surface、control flow
+
+#### 本轮固定结论
+
+- `runtime-facing behavior gate` 只指 public exception / public API error / public control-flow change 之前的最后一个 internal gate
+- 以下内容都不属于 runtime-facing behavior gate：
+  - helper 局部变量
+  - internal carried signal
+  - visible gate result
+  - mapping candidate
+  - runtime-facing error gate result
+  - fixtures / samples 中的 recommended error code
+- detector result future 最多只允许 first approach：
+  - internal-only runtime-facing behavior gate boundary
+- 上述 boundary 仍然不是：
+  - public exception owner
+  - public API owner
+  - parser / response_guard owner
+  - runtime control-flow owner
+  - browser / JS / fallback owner
+- first-batch 允许进入 future runtime-facing behavior gate discussion 的 detector candidate 仍只限于：
+  - challenge
+  - gateway
+- 以下内容当前继续排除在该讨论之外：
+  - suspicious HTML
+  - browser-required
+  - js-required
+- `LEGADO_ANTI_BOT_CHALLENGE` 与 `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 当前继续保持：
+  - `adapter_modeled`
+  - 3-B.23 决策本身不构成升级条件
+
+#### 为什么本轮默认不落代码
+
+- 当前仓库已经能证明 detector result 可到达：
+  - internal observation
+  - internal carrying
+  - visible gate result
+  - runtime error mapping candidate
+  - runtime-facing gate candidate
+  - no-op gate decision
+- 当前真正缺的不是新的 runtime helper，而是：
+  - behavior-gate 本体与邻接层的术语边界
+  - future minimal approach layer 的上限
+  - 允许进入 discussion 的 candidate 范围
+  - 错误码升级前提
+- 若在 3-B.23 直接落 runtime-facing behavior gate 代码，最容易把：
+  - `recommended / carried / gate candidate`
+  - 误写成
+  - `runtime behavior already changed`
+
+#### 验收标准
+
+- 文档明确写清：
+  - runtime-facing behavior gate 是什么
+  - runtime-facing behavior gate 不是什么
+  - future minimal approach layer 是什么
+  - 哪些 detector candidate 允许进入 future runtime-facing behavior gate discussion
+  - challenge/gateway 错误码为何仍不得升级
+- Traceability 明确新增：
+  - runtime-facing behavior gate definition
+  - minimal approach layer decision
+  - runtime-facing behavior gate discussion candidate gate
+  - detector error-code discussion threshold
+  - 下一轮最小任务占位
+- 错误码文档明确写清：
+  - `adapter_modeled` 继续保持
+  - internal runtime-facing behavior gate boundary 不等于 `runtime-implemented`
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.23` 已完成 detector runtime-facing behavior gate 决策，仓库仍未进入 detector live runtime，仍未进入 runtime-facing behavior gate 生效，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.24：detector runtime-facing behavior gate minimal skeleton 实现**
+
+范围必须继续收紧为：
+
+- 一个 internal-only runtime-facing behavior gate input / candidate / result / noop decision contract
+- 一个 runtime-facing error gate candidate -> runtime-facing behavior gate candidate 的 no-op helper
+- 一个 `source_engine.py` 邻接的 internal behavior-gate 调用点
+- 明确的 no-behavior-change / no-exception-surface-change / no-api-surface-change / no-control-flow-change 测试
+
+当前仍不应直接进入：
+
+- detector live runtime
+- runtime-facing behavior gate 生效
+- detector 错误码对外抛出
+- challenge/gateway live support
+- browser/js fallback
+- anti-bot bypass
+
+### Phase 3-B.24：detector runtime-facing behavior gate minimal skeleton 实现
+#### 目标
+
+- 落地 internal-only runtime-facing behavior gate input / result / candidate / noop decision contract
+- 落地 minimal runtime-facing behavior gate helper
+- 落地 source-engine 邻接更高层的 no-op runtime-facing behavior gate 调用点
+- 落地 higher-layer internal behavior gate candidate carrying
+- 落地 no-behavior-change / no-exception-surface-change / no-api-surface-change / no-control-flow-change tests
+
+#### 默认策略
+
+- 允许进入代码
+- 但只允许内部 behavior gate schema / helper / source-engine 邻接调用 / fixtures / tests / docs
+- 默认不改 public behavior
+- 默认不进入 runtime-facing behavior gate 生效
+
+#### 已落地范围
+
+- `backend/app/schemas/online_detector_runtime_facing_behavior_gate.py`
+- `backend/app/services/online/detector_runtime_facing_behavior_gate_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_runtime_facing_behavior_gate_samples.json`
+- `backend/tests/test_online_detector_runtime_facing_behavior_gate_skeleton.py`
+
+#### 明确不做什么
+
+- 不改 `fetch_service.py`
+- 不改 `response_guard_service.py`
+- 不改 parser / content_parse 行为
+- 不改 public exception surface
+- 不改 public API error body / shape
+- 不改 public router / importer / DB / frontend
+- 不改 control flow
+- 不做 runtime-facing behavior gate 生效
+- 不做 challenge/gateway live support
+- 不做 browser/js fallback
+- 不做 anti-bot bypass
+
+#### 为什么这一步安全
+
+- behavior gate helper 只消费 runtime-facing error gate result / detector result
+- behavior gate result 只表达 higher-layer internal behavior gate candidate 与 no-op decision
+- source-engine 中的 behavior gate helper 调用结果被明确丢弃
+- source-engine 中的 behavior gate helper 调用继续用 no-op guard 隔离
+
+#### 验收标准
+
+- behavior gate input / candidate / result contract 可独立构建
+- challenge / gateway / no-candidate / noop cases 按预期处理
+- success / error path higher-layer behavior gate carrying 可触发
+- 既有返回值、异常、parser、response_guard、API、control-flow 行为不变
+- detector 错误码状态不升级为 `runtime-implemented`
+- 相关回归测试继续通过
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.24` 已完成 detector runtime-facing behavior gate minimal skeleton 实现，但仓库仍未进入 detector live runtime，仍未进入 runtime-facing behavior gate 生效，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.25：detector runtime-facing behavior activation 决策轮**
+
+范围必须继续收紧为：
+
+- 哪类 internal behavior gate candidate future 有资格进入真正的 runtime-facing behavior activation 讨论
+- runtime-facing behavior gate 与 public exception / API / parser / response_guard / control-flow 的真实接缝
+- public behavior change 前还缺哪些门槛
+
+当前仍不应直接进入：
+
+- detector live runtime
+- runtime-facing behavior gate 生效
+- detector 错误码对外抛出
+- challenge/gateway live support
+- browser/js fallback
+- anti-bot bypass
+
+### Phase 3-B.25：detector runtime-facing behavior activation 决策轮
+#### 目标
+
+- 冻结 `runtime-facing behavior activation` 的严格定义
+- 冻结 detector result future 最多只允许接近到哪一层 internal activation boundary
+- 冻结 first-batch 允许进入 future runtime-facing behavior activation discussion 的 detector candidate 范围
+- 冻结 challenge/gateway 候选错误码进入 future activation skeleton 讨论前仍需满足的门槛
+- 为下一轮最小 runtime-facing behavior activation skeleton 实现收敛到最小、可回退、no-op 的内部结构入口
+
+#### 默认策略
+
+- 默认只改文档、Traceability、错误码状态与测试规划
+- 默认不落代码
+- 默认不进入 runtime-facing behavior activation
+- 默认不改变 `fetch_service.py`、`response_guard_service.py`、parser、API、exception surface、control flow、fallback dispatch
+
+#### 本轮固定结论
+
+- `runtime-facing behavior activation` 只指 public exception / public API error / public control-flow / public fallback dispatch 之前的最后一个 internal activation gate
+- 以下内容都不属于 runtime-facing behavior activation：
+  - helper 局部变量
+  - internal carried signal
+  - visible gate result
+  - mapping candidate
+  - runtime-facing error gate result
+  - runtime-facing behavior gate result
+  - fixtures / samples 中的 recommended error code
+- detector result future 最多只允许 first approach：
+  - internal-only runtime-facing behavior activation boundary
+- 上述 boundary 仍然不是：
+  - public exception owner
+  - public API owner
+  - parser / response_guard owner
+  - runtime control-flow owner
+  - browser / JS / fallback owner
+- first-batch 允许进入 future runtime-facing behavior activation discussion 的 detector candidate 仍只限于：
+  - challenge
+  - gateway
+- 以下内容当前继续排除在该讨论之外：
+  - suspicious HTML
+  - browser-required
+  - js-required
+- `LEGADO_ANTI_BOT_CHALLENGE` 与 `LEGADO_BLOCKED_BY_ANTI_BOT_GATEWAY` 当前继续保持：
+  - `adapter_modeled`
+  - 3-B.25 决策本身不构成升级条件
+
+#### 为什么本轮默认不落代码
+
+- 当前仓库已经能证明 detector result 可到达：
+  - internal observation
+  - internal carrying
+  - visible gate result
+  - runtime error mapping candidate
+  - runtime-facing gate candidate
+  - runtime-facing behavior gate candidate
+  - no-op gate decision
+- 当前真正缺的不是新的 runtime helper，而是：
+  - activation 本体与邻接层的术语边界
+  - future minimal approach layer 的上限
+  - 允许进入 discussion 的 candidate 范围
+  - 错误码升级前提
+- 若在 3-B.25 直接落 runtime-facing behavior activation 代码，最容易把：
+  - `recommended / carried / gate candidate`
+  - 误写成
+  - `runtime behavior already changed`
+
+#### 验收标准
+
+- 文档明确写清：
+  - runtime-facing behavior activation 是什么
+  - runtime-facing behavior activation 不是什么
+  - future minimal approach layer 是什么
+  - 哪些 detector candidate 允许进入 future runtime-facing behavior activation discussion
+  - challenge/gateway 错误码为何仍不得升级
+- Traceability 明确新增：
+  - runtime-facing behavior activation definition
+  - minimal approach layer decision
+  - runtime-facing behavior activation discussion candidate gate
+  - detector error-code activation threshold
+  - 下一轮最小任务占位
+- 错误码文档明确写清：
+  - `adapter_modeled` 继续保持
+  - internal runtime-facing behavior activation boundary 不等于 `runtime-implemented`
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.25` 已完成 detector runtime-facing behavior activation 决策，仓库仍未进入 detector live runtime，仍未进入 runtime-facing behavior activation 生效，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.26：detector runtime-facing behavior activation minimal skeleton 实现**
+
+范围必须继续收紧为：
+
+- 一个 internal-only runtime-facing behavior activation input / candidate / result / noop decision contract
+- 一个 runtime-facing behavior gate candidate -> runtime-facing behavior activation candidate 的 no-op helper
+- 一个 `source_engine.py` 邻接的 internal activation 调用点
+- 明确的 no-behavior-change / no-exception-surface-change / no-api-surface-change / no-control-flow-change / no-fallback-dispatch-change 测试
+
+当前仍不应直接进入：
+
+- detector live runtime
+- runtime-facing behavior activation 生效
+- detector 错误码对外抛出
+- challenge/gateway live support
+- browser/js fallback
+- anti-bot bypass
+
+### Phase 3-B.26：detector runtime-facing behavior activation minimal skeleton 实现
+#### 目标
+
+- 落地 internal-only runtime-facing behavior activation input / result / candidate / noop decision contract
+- 落地 minimal runtime-facing behavior activation helper
+- 落地 source-engine 邻接更高层的 no-op runtime-facing behavior activation 调用点
+- 落地 higher-layer internal activation candidate carrying
+- 落地 no-behavior-change / no-exception-surface-change / no-api-surface-change / no-control-flow-change / no-fallback-dispatch-change tests
+
+#### 默认策略
+
+- 允许进入代码
+- 但只允许内部 activation schema / helper / source-engine 邻接调用 / fixtures / tests / docs
+- 默认不改 public behavior
+- 默认不进入 runtime-facing behavior activation 生效
+
+#### 已落地范围
+
+- `backend/app/schemas/online_detector_runtime_facing_behavior_activation.py`
+- `backend/app/services/online/detector_runtime_facing_behavior_activation_skeleton.py`
+- `backend/app/services/online/source_engine.py`
+- `backend/tests/fixtures/online_detector_runtime_facing_behavior_activation_samples.json`
+- `backend/tests/test_online_detector_runtime_facing_behavior_activation_skeleton.py`
+
+#### 明确不做什么
+
+- 不改 `fetch_service.py`
+- 不改 `response_guard_service.py`
+- 不改 parser / content_parse 行为
+- 不改 public exception surface
+- 不改 public API error body / shape
+- 不改 public router / importer / DB / frontend
+- 不改 control flow
+- 不改 fallback dispatch
+- 不做 runtime-facing behavior activation 生效
+- 不做 challenge/gateway live support
+- 不做 browser/js fallback
+- 不做 anti-bot bypass
+
+#### 为什么这一步安全
+
+- activation helper 只消费 runtime-facing behavior gate result / detector result
+- activation result 只表达 higher-layer internal activation candidate 与 no-op decision
+- source-engine 中的 activation helper 调用结果被明确丢弃
+- source-engine 中的 activation helper 调用继续用 no-op guard 隔离
+
+#### 验收标准
+
+- activation input / candidate / result contract 可独立构建
+- challenge / gateway / no-candidate / noop cases 按预期处理
+- success / error path higher-layer activation carrying 可触发
+- 既有返回值、异常、parser、response_guard、API、control-flow、fallback-dispatch 行为不变
+- detector 错误码状态不升级为 `runtime-implemented`
+- 相关回归测试继续通过
+
+#### 当前阶段结论
+
+本轮完成后，当前项目应继续表述为：
+
+> `Phase 3-B.26` 已完成 detector runtime-facing behavior activation minimal skeleton 实现，但仓库仍未进入 detector live runtime，仍未进入 runtime-facing behavior activation 生效，仍未进入 anti-bot / browser / JS 实装，仍未进入 3-C / 3-D。
+
+#### 下一轮最小入口建议
+
+推荐下一轮进入：
+
+- **Phase 3-B.27：detector runtime-facing behavior effect 决策轮**
+
+范围必须继续收紧为：
+
+- 哪类 internal activation candidate future 有资格进入真正的 runtime-facing behavior effect 讨论
+- runtime-facing behavior activation 与 public exception / API / parser / response_guard / control-flow / fallback dispatch 的真实接缝
+- public behavior change 前还缺哪些门槛
+
+当前仍不应直接进入：
+
+- detector live runtime
+- runtime-facing behavior activation 生效
 - detector 错误码对外抛出
 - challenge/gateway live support
 - browser/js fallback
