@@ -1,9 +1,9 @@
 ﻿<template>
-  <n-config-provider>
+  <n-config-provider :theme="naiveTheme">
     <n-global-style />
     <n-message-provider>
       <n-dialog-provider>
-        <div class="app-shell">
+        <div class="app-shell" :class="appThemeClass">
           <router-view />
 
           <transition name="boot-fade">
@@ -23,17 +23,44 @@
 </template>
 
 <script setup lang="ts">
+import { computed, watch } from "vue";
 import {
   NConfigProvider,
   NDialogProvider,
   NGlobalStyle,
   NMessageProvider,
   NSpin,
+  darkTheme,
 } from "naive-ui";
+import { useRoute } from "vue-router";
 
 import { useAuthStore } from "./stores/auth";
+import { useAppThemeStore } from "./stores/app-theme";
+import { usePreferencesStore } from "./stores/preferences";
 
 const authStore = useAuthStore();
+const route = useRoute();
+const appThemeStore = useAppThemeStore();
+const preferencesStore = usePreferencesStore();
+const appThemeClass = computed(() => `app-theme--${appThemeStore.theme}`);
+const naiveTheme = computed(() => (appThemeStore.theme === "dark" ? darkTheme : null));
+
+watch(
+  () => preferencesStore.reader.theme,
+  (theme, previousTheme) => {
+    // 阅读页里的局部主题切换仍然保留时，这里顺手把全局主题同步过去。
+    if (
+      !preferencesStore.initialized ||
+      route.name !== "reader" ||
+      theme === previousTheme ||
+      theme === appThemeStore.theme
+    ) {
+      return;
+    }
+
+    appThemeStore.setTheme(theme, true);
+  },
+);
 </script>
 
 <style scoped>

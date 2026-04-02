@@ -10,7 +10,7 @@
       </div>
 
       <div class="app-layout__actions">
-        <n-space size="small" wrap>
+        <n-space size="small" wrap class="app-layout__nav-actions">
           <n-button
             :type="route.name === 'books' ? 'primary' : 'default'"
             secondary
@@ -27,6 +27,9 @@
           </n-button>
           <n-button secondary @click="backendModalVisible = true">
             切换后端
+          </n-button>
+          <n-button secondary @click="handleToggleTheme">
+            {{ themeToggleLabel }}
           </n-button>
         </n-space>
 
@@ -55,14 +58,19 @@ import { useRoute, useRouter } from "vue-router";
 
 import BackendSwitchModal from "../components/BackendSwitchModal.vue";
 import { useAuthStore } from "../stores/auth";
+import { useAppThemeStore } from "../stores/app-theme";
+import { usePreferencesStore } from "../stores/preferences";
 import { getBackendDisplaySummary } from "../utils/backend";
 
 const authStore = useAuthStore();
+const appThemeStore = useAppThemeStore();
+const preferencesStore = usePreferencesStore();
 const route = useRoute();
 const router = useRouter();
 const backendModalVisible = ref(false);
 const isImmersiveRoute = computed(() => route.meta.immersive === true);
 const backendSummary = computed(() => getBackendDisplaySummary());
+const themeToggleLabel = computed(() => (appThemeStore.theme === "dark" ? "日间模式" : "夜间模式"));
 
 function goTo(name: "books" | "rules") {
   void router.push({ name });
@@ -71,6 +79,23 @@ function goTo(name: "books" | "rules") {
 function handleLogout() {
   authStore.logout();
   void router.push({ name: "login" });
+}
+
+function handleToggleTheme() {
+  const nextTheme = appThemeStore.theme === "dark" ? "light" : "dark";
+  appThemeStore.setTheme(nextTheme, true);
+
+  // 阅读页继续复用既有 reader.theme，这里顺带同步，避免进入阅读页后主题不一致。
+  if (preferencesStore.initialized) {
+    preferencesStore.patchReader({ theme: nextTheme }, 0);
+    return;
+  }
+
+  void preferencesStore.ensureReady().then(() => {
+    preferencesStore.patchReader({ theme: nextTheme }, 0);
+  }).catch(() => {
+    // 全局主题已经本地生效，这里只是不让 reader 偏好同步失败打断交互。
+  });
 }
 </script>
 
@@ -94,7 +119,7 @@ function handleLogout() {
   align-items: center;
   padding: 16px 24px;
   backdrop-filter: blur(12px);
-  background: color-mix(in srgb, var(--surface-color) 88%, white 12%);
+  background: var(--surface-header-bg);
 }
 
 .app-layout__brand {
@@ -130,6 +155,11 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 18px;
+}
+
+.app-layout__nav-actions {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-layout__user {

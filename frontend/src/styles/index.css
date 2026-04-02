@@ -21,6 +21,23 @@
   --surface-shadow: 0 18px 48px rgba(82, 55, 28, 0.12);
   --surface-raised: color-mix(in srgb, var(--surface-color) 94%, white 6%);
   --surface-soft: color-mix(in srgb, var(--surface-color) 82%, white 18%);
+  --surface-header-bg: rgba(255, 250, 242, 0.88);
+  --surface-panel-bg: rgba(255, 255, 255, 0.68);
+  --surface-panel-soft-bg: rgba(255, 255, 255, 0.48);
+  --surface-card-bg: rgba(255, 252, 247, 0.82);
+  --surface-input-bg: rgba(255, 255, 255, 0.72);
+  --surface-empty-bg: rgba(255, 250, 242, 0.78);
+  --surface-stat-bg: rgba(255, 255, 255, 0.64);
+  --surface-mobile-card-bg: rgba(255, 255, 255, 0.56);
+  --surface-intro-bg: rgba(255, 255, 255, 0.58);
+  --surface-test-bg: rgba(255, 255, 255, 0.5);
+  --surface-tab-hover-bg: rgba(109, 90, 74, 0.08);
+  --surface-tab-active-bg: rgba(255, 255, 255, 0.86);
+  --surface-tab-active-border: rgba(184, 93, 54, 0.16);
+  --surface-cover-bg: linear-gradient(180deg, #fffdf8 0%, #f3eadb 100%);
+  --surface-cover-fill-bg: rgba(255, 255, 255, 0.72);
+  --surface-cover-loading-bg: rgba(255, 255, 255, 0.82);
+  --surface-code-bg: rgba(46, 36, 29, 0.05);
   --primary-color: #b85d36;
   --primary-soft: rgba(184, 93, 54, 0.12);
   --accent-color: #346b61;
@@ -49,6 +66,50 @@
   --text-caption: 13px;
 }
 
+body.app-theme--dark {
+  color-scheme: dark;
+  --app-background:
+    radial-gradient(circle at top left, rgba(214, 141, 94, 0.12), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(112, 160, 149, 0.12), transparent 28%),
+    linear-gradient(180deg, #171411 0%, #0d0b09 100%);
+  --app-shell-color: #1b1714;
+  --surface-color: #241f1a;
+  --surface-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+  --surface-raised: rgba(33, 28, 24, 0.92);
+  --surface-soft: rgba(38, 32, 28, 0.78);
+  --surface-header-bg: rgba(26, 22, 19, 0.9);
+  --surface-panel-bg: rgba(255, 255, 255, 0.06);
+  --surface-panel-soft-bg: rgba(255, 255, 255, 0.05);
+  --surface-card-bg: rgba(27, 23, 20, 0.9);
+  --surface-input-bg: rgba(255, 255, 255, 0.06);
+  --surface-empty-bg: rgba(29, 25, 21, 0.9);
+  --surface-stat-bg: rgba(255, 255, 255, 0.05);
+  --surface-mobile-card-bg: rgba(255, 255, 255, 0.04);
+  --surface-intro-bg: rgba(255, 255, 255, 0.05);
+  --surface-test-bg: rgba(255, 255, 255, 0.04);
+  --surface-tab-hover-bg: rgba(255, 255, 255, 0.05);
+  --surface-tab-active-bg: rgba(255, 255, 255, 0.08);
+  --surface-tab-active-border: rgba(214, 141, 94, 0.22);
+  --surface-cover-bg: linear-gradient(180deg, #2c2622 0%, #191613 100%);
+  --surface-cover-fill-bg: rgba(255, 255, 255, 0.05);
+  --surface-cover-loading-bg: rgba(255, 255, 255, 0.08);
+  --surface-code-bg: rgba(255, 255, 255, 0.06);
+  --primary-color: #d68d5e;
+  --primary-soft: rgba(214, 141, 94, 0.16);
+  --accent-color: #78aba0;
+  --text-primary: #f3e7d9;
+  --text-secondary: #b9a693;
+  --border-color: rgba(243, 230, 215, 0.14);
+  --border-color-soft: rgba(243, 230, 215, 0.08);
+  --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.38);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.46);
+}
+
+body.app-theme--light {
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -68,6 +129,9 @@ body {
   background: var(--app-background);
   color: var(--text-primary);
   line-height: 1.5;
+  transition:
+    background 180ms ease,
+    color 180ms ease;
 }
 
 body,
@@ -85,4 +149,94 @@ a {
 
 ::selection {
   background: rgba(184, 93, 54, 0.18);
+}
+
+body.app-theme--dark .bookshelf-page__tabs {
+  background: var(--surface-panel-soft-bg);
+}
+
+body.app-theme--dark .bookshelf-page__tab:hover {
+  background: var(--surface-tab-hover-bg);
+}
+
+body.app-theme--dark .bookshelf-page__tab--active {
+  background: var(--surface-tab-active-bg);
+  border-color: var(--surface-tab-active-border);
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 141, 94, 0.08),
+    0 6px 14px rgba(0, 0, 0, 0.24);
+}
+
+body.app-theme--dark .bookshelf-page__filter-actions .n-base-selection,
+body.app-theme--dark .bookshelf-page__filter-actions .n-input-wrapper {
+  background: var(--surface-input-bg);
+  border-color: var(--border-color-soft);
+}
+
+body.app-theme--dark .bookshelf-page__empty {
+  border-color: var(--border-color-soft);
+  background: var(--surface-empty-bg);
+}
+
+body.app-theme--dark .bookshelf-item {
+  background: var(--surface-card-bg);
+}
+
+body.app-theme--dark .bookshelf-item__cover {
+  border-color: var(--border-color-soft);
+  background: var(--surface-cover-bg);
+  color: var(--text-secondary);
+}
+
+body.app-theme--dark .bookshelf-item__cover--filled {
+  background: var(--surface-cover-fill-bg);
+}
+
+body.app-theme--dark .bookshelf-item__cover--loading {
+  background: var(--surface-cover-loading-bg);
+}
+
+body.app-theme--dark .rule-page__stat {
+  background: var(--surface-stat-bg);
+}
+
+body.app-theme--dark .rule-page__toolbar {
+  background: var(--surface-panel-bg);
+}
+
+body.app-theme--dark .rule-mobile-card,
+body.app-theme--dark .rule-mobile-result-card {
+  background: var(--surface-mobile-card-bg);
+}
+
+body.app-theme--dark .rule-code-block {
+  background: var(--surface-code-bg);
+}
+
+body.app-theme--dark .rule-form__intro {
+  background: var(--surface-intro-bg);
+}
+
+body.app-theme--dark .rule-test__form,
+body.app-theme--dark .rule-test__result,
+body.app-theme--dark .rule-apply__form,
+body.app-theme--dark .rule-apply__result {
+  background: var(--surface-test-bg);
+}
+
+body.app-theme--dark .detail-info-item,
+body.app-theme--dark .detail-group-list,
+body.app-theme--dark .detail-file-path {
+  background: var(--surface-mobile-card-bg);
+}
+
+body.app-theme--dark .detail-hero__cover--filled,
+body.app-theme--dark .metadata-modal__cover--filled {
+  background: var(--surface-cover-fill-bg);
+}
+
+body.app-theme--dark .metadata-modal__cover {
+  border-color: var(--border-color-soft);
+  background: var(--surface-cover-bg);
+  color: var(--text-secondary);
 }
